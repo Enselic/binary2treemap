@@ -1,2 +1,3 @@
 # binary2treemap
-TODO
+
+Do not use this tool. It is in very early stages of development.

@@ -1,0 +1,29 @@
+[package]
+edition = "2021"
+name = "binary2treemap"
+version = "0.0.1"
+description = "Create a treemap of the source code of each byte in a binary. Investigate binary bloat."
+homepage = "https://github.com/Enselic/binary2treemap"
+documentation = "https://docs.rs/binary2treemap"
+readme = "README.md"
+# TODO keywords = ["foo", "bar"]
+# TODO categories = ["baz", "bom"]
+license = "MIT"
+repository = "https://github.com/Enselic/binary2treemap"
+
+[dependencies]
+addr2line = "0.21.0"
+serde_json = "1.0.113"
+
+[dependencies.clap]
+version = "4.4.10"
+features = ["derive", "wrap_help"]
+
+[dependencies.object]
+version = "0.32.2"
+default-features = false
+features = ["read"]
+
+[dependencies.serde]
+version = "1.0.196"
+features = ["derive"]
