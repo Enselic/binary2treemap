@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", serde_json::to_string_pretty(&d3js)?);
     } else {
         let data = serde_json::to_string(&d3js)?;
-        println!("{}", data.replace("\"", "\\\""));
+        println!("{}", data.replace('\"', "\\\""));
     }
 
     Ok(())

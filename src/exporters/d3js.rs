@@ -38,11 +38,11 @@ fn node_to_node(name: String, data_node: &crate::node::DataNode<'_>, max_depth: 
 }
 
 pub fn export(data_node: HashMap<&'_ str, DataNode<'_>>, max_depth: u64) -> Node {
-    let foo = DataNode {
+    let node = DataNode {
         size: 0,
         sub_components: data_node,
     };
-    node_to_node("root".to_string(), &foo, max_depth)
+    node_to_node("root".to_string(), &node, max_depth)
 }
 
 #[cfg(test)]
