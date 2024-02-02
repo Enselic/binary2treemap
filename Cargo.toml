@@ -27,3 +27,6 @@ features = ["read"]
 [dependencies.serde]
 version = "1.0.196"
 features = ["derive"]
+
+[profile.release]
+debug = true

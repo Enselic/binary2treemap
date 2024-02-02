@@ -18,7 +18,7 @@ pub struct Node {
     kind: NodeKind,
 }
 
-fn node_to_node(name: String, data_node: &crate::node::DataNode<'_>, max_depth: u64) -> Node {
+fn node_to_node(name: String, data_node: &crate::node::DataNode, max_depth: u64) -> Node {
     return Node {
         name,
         kind: if data_node.sub_components.is_empty() || max_depth == 0 {
@@ -37,7 +37,7 @@ fn node_to_node(name: String, data_node: &crate::node::DataNode<'_>, max_depth: 
     };
 }
 
-pub fn export(data_node: HashMap<&'_ str, DataNode<'_>>, max_depth: u64) -> Node {
+pub fn export(data_node: HashMap<String, DataNode>, max_depth: u64) -> Node {
     let node = DataNode {
         size: 0,
         sub_components: data_node,

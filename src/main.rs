@@ -40,19 +40,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let object = object::File::parse(file_data.as_slice())?;
     let context = addr2line::Context::new(&object)?;
 
-    let mut root_component: HashMap<&'_ str, DataNode<'_>> = HashMap::new();
+    let mut root_component: HashMap<String, DataNode> = HashMap::new();
 
-    const UNKNOWN: &str = "unknown";
+    let unknown: String = "unknown".to_string();
 
     let size = file_data.len();
     for probe in 0..size {
         if let Some(loc) = context.find_location(probe as u64).unwrap() {
-            if let Some(file) = loc.file {
-                let mut current_component: &mut HashMap<&'_ str, DataNode<'_>> =
+            if let Some(file2) = loc.file {
+                let file = file2.to_owned();
+                let mut file3: String = file.clone();
+                if let Some(loc) = loc.line {
+                    let loc = loc.to_string();
+                    file3 = format!("{}/{}", file, loc);
+                }
+                let mut current_component: &mut HashMap<String, DataNode> =
                     &mut root_component;
-                for component in file.split('/') {
+                for component in file3.split('/') {
+                    let owned = component.to_owned();
+                    if owned.is_empty() {
+                        continue;
+                    }
                     let entry = current_component
-                        .entry(component)
+                        .entry(owned)
                         .or_insert_with(|| DataNode {
                             size: 0,
                             sub_components: HashMap::new(),
@@ -62,7 +72,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             } else {
                 root_component
-                    .entry(UNKNOWN)
+                    .entry(unknown.clone())
                     .or_insert_with(|| DataNode {
                         size: 0,
                         sub_components: HashMap::new(),
