@@ -11,7 +11,9 @@ pub fn serve() {
 
 async fn serve_impl() {
     // build our application with a route
-    let app = axum::Router::new().route("/", get(handler));
+    let app = axum::Router::new()
+        .route("/", get(handler))
+        .route("/d3.v7.min.js", get(d3));
 
     // run it
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
@@ -22,5 +24,9 @@ async fn serve_impl() {
 }
 
 async fn handler() -> Html<&'static str> {
-    Html("<h1>Hello, World!</h1>")
+    Html(include_str!("../static/index.html"))
+}
+
+async fn d3() -> Html<&'static str> {
+    Html(include_str!("../static/d3.v7.min.js"))
 }
