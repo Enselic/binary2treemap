@@ -2,6 +2,8 @@ use std::{collections::HashMap, path::PathBuf};
 
 mod exporters;
 
+mod serve;
+
 mod node;
 use node::DataNode;
 
