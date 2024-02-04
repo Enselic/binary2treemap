@@ -28,7 +28,7 @@ pub struct Args {
     path: PathBuf,
 
     /// Maximum depth of the treemap.
-    #[arg(long, default_value = "6")]
+    #[arg(long, default_value = "999")]
     max_depth: u64,
 
     /// Output format.
