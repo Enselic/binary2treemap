@@ -1,3 +1,4 @@
+use axum::response::Html;
 use axum::routing::get;
 
 pub fn serve(data: String) {
@@ -12,10 +13,13 @@ pub fn serve(data: String) {
 async fn serve_impl(data: String) {
     // build our application with a route
     let app = axum::Router::new()
-        .route("/", get(include_str!("../static/index.html").to_owned()))
+        .route(
+            "/",
+            get(Html(include_str!("../static/index.html")).to_owned()),
+        )
         .route(
             "/d3.v7.min.js",
-            get(include_str!("../static/d3.v7.min.js").to_owned()),
+            get(Html(include_str!("../static/d3.v7.min.js").to_owned())),
         )
         .route("/data.json", get(data));
 

@@ -4,7 +4,7 @@
 <script type="module">
 
     // TODO: Proper attribution to https://observablehq.com/@d3/zoomable-treemap
-    function zoomableTreemapChart() {
+    function zoomableTreemapChart(data) {
         // Specify the chart’s dimensions.
         const width = 928;
         const height = 924;
@@ -20,21 +20,6 @@
                 child.y1 = y0 + child.y1 / height * (y1 - y0);
             }
         }
-
-        const data = fetch("/data.json").then(response => {
-            // Check if the request was successful
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json(); // Parse the response body as JSON
-        })
-            .then(data => {
-                console.log(data); // Process the data
-            })
-            .catch(error => {
-                console.error('There was a problem with your fetch operation:', error);
-            });
-
 
 
         // Compute the layout.
@@ -77,14 +62,14 @@
                 .text(d => `${name(d)}\n${format(d.value)}`);
 
             node.append("rect")
-                .attr("id", d => (d.leafUid = DOM.uid("leaf")).id)
+                //.attr("id", d => (d.leafUid = DOM.uid("leaf")).id)
                 .attr("fill", d => d === root ? "#fff" : d.children ? "#ccc" : "#ddd")
                 .attr("stroke", "#fff");
 
             node.append("clipPath")
-                .attr("id", d => (d.clipUid = DOM.uid("clip")).id)
+                //.attr("id", d => (d.clipUid = DOM.uid("clip")).id)
                 .append("use")
-                .attr("xlink:href", d => d.leafUid.href);
+                //.attr("xlink:href", d => d.leafUid.href);
 
             node.append("text")
                 .attr("clip-path", d => d.clipUid)
@@ -147,44 +132,20 @@
     }
 
 
-
-
-
-
-    // Declare the chart dimensions and margins.
-    const width = 640;
-    const height = 400;
-    const marginTop = 20;
-    const marginRight = 20;
-    const marginBottom = 30;
-    const marginLeft = 40;
-
-    // Declare the x (horizontal position) scale.
-    const x = d3.scaleUtc()
-        .domain([new Date("2023-01-01"), new Date("2024-01-01")])
-        .range([marginLeft, width - marginRight]);
-
-    // Declare the y (vertical position) scale.
-    const y = d3.scaleLinear()
-        .domain([0, 100])
-        .range([height - marginBottom, marginTop]);
-
-    // Create the SVG container.
-    const svg = d3.create("svg")
-        .attr("width", width)
-        .attr("height", height);
-
-    // Add the x-axis.
-    svg.append("g")
-        .attr("transform", `translate(0,${height - marginBottom})`)
-        .call(d3.axisBottom(x));
-
-    // Add the y-axis.
-    svg.append("g")
-        .attr("transform", `translate(${marginLeft},0)`)
-        .call(d3.axisLeft(y));
-
-    // Append the SVG element.
-    container.append(zoomableTreemapChart());
+    fetch('/data.json')
+        .then(response => {
+            // Check if the request was successful
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json(); // Parse the response body as JSON
+        })
+        .then(data => {
+            // Append the SVG element.
+            container.append(zoomableTreemapChart(data));
+        })
+        .catch(error => {
+            console.error('There was a problem with your fetch operation:', error);
+        });
 
 </script>
