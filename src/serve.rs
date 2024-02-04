@@ -1,4 +1,4 @@
-use axum::response::Html;
+use axum::{response::Html, routing::get};
 
 pub fn serve() {
     let rt = tokio::runtime::Builder::new_current_thread()

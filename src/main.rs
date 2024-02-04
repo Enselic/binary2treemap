@@ -56,19 +56,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let loc = loc.to_string();
                     file3 = format!("{}/{}", file, loc);
                 }
-                let mut current_component: &mut HashMap<String, DataNode> =
-                    &mut root_component;
+                let mut current_component: &mut HashMap<String, DataNode> = &mut root_component;
                 for component in file3.split('/') {
                     let owned = component.to_owned();
                     if owned.is_empty() {
                         continue;
                     }
-                    let entry = current_component
-                        .entry(owned)
-                        .or_insert_with(|| DataNode {
-                            size: 0,
-                            sub_components: HashMap::new(),
-                        });
+                    let entry = current_component.entry(owned).or_insert_with(|| DataNode {
+                        size: 0,
+                        sub_components: HashMap::new(),
+                    });
                     entry.size += 1;
                     current_component = &mut entry.sub_components;
                 }
@@ -91,6 +88,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let data = serde_json::to_string(&d3js)?;
         println!("{}", data.replace('\"', "\\\""));
     }
+
+    serve::serve();
 
     Ok(())
 }
