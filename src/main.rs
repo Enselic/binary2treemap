@@ -81,15 +81,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    let mut to_serve = String::new();
     let d3js = exporters::d3js::export(root_component, args.max_depth);
     if args.format == Format::PrettyJSON {
         println!("{}", serde_json::to_string_pretty(&d3js)?);
     } else {
         let data = serde_json::to_string(&d3js)?;
+        to_serve = data.clone();
         println!("{}", data.replace('\"', "\\\""));
     }
 
-    serve::serve();
+    serve::serve(to_serve);
 
     Ok(())
 }

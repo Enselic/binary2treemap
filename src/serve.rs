@@ -1,19 +1,23 @@
-use axum::{response::Html, routing::get};
+use axum::routing::get;
 
-pub fn serve() {
+pub fn serve(data: String) {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap();
 
-    rt.block_on(serve_impl()); // You can now call async functions using block_on
+    rt.block_on(serve_impl(data));
 }
 
-async fn serve_impl() {
+async fn serve_impl(data: String) {
     // build our application with a route
     let app = axum::Router::new()
-        .route("/", get(handler))
-        .route("/d3.v7.min.js", get(d3));
+        .route("/", get(include_str!("../static/index.html").to_owned()))
+        .route(
+            "/d3.v7.min.js",
+            get(include_str!("../static/d3.v7.min.js").to_owned()),
+        )
+        .route("/data.json", get(data));
 
     // run it
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
@@ -21,12 +25,4 @@ async fn serve_impl() {
         .unwrap();
     println!("listening on http://{}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
-}
-
-async fn handler() -> Html<&'static str> {
-    Html(include_str!("../static/index.html"))
-}
-
-async fn d3() -> Html<&'static str> {
-    Html(include_str!("../static/d3.v7.min.js"))
 }
