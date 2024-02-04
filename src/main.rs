@@ -15,11 +15,9 @@ enum Format {
 
 #[derive(clap::Parser, Debug)]
 #[command(
-    author,
     version,
-    about = "List and diff the public API of Rust library crates between releases and commits.",
-    long_about = "List and diff the public API of Rust library crates between releases and commits. Website: https://github.com/Enselic/cargo-public-api",
-    bin_name = "cargo public-api"
+    about = "Create a treemap of the source code of each byte in a binary. Investigate binary bloat.",
+    long_about = "Create a treemap of the source code of each byte in a binary. Investigate binary bloat. Website: https://github.com/Enselic/binary2treemap"
 )]
 #[command(flatten_help = true)]
 pub struct Args {
@@ -28,8 +26,8 @@ pub struct Args {
     path: PathBuf,
 
     /// Maximum depth of the treemap.
-    #[arg(long, default_value = "999")]
-    max_depth: u64,
+    #[arg(long)]
+    max_depth: Option<u64>,
 
     /// Output format.
     #[arg(long, default_value = "pretty-json")]

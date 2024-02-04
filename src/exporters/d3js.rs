@@ -18,10 +18,15 @@ pub struct Node {
     kind: NodeKind,
 }
 
-fn node_to_node(name: String, data_node: &crate::node::DataNode, max_depth: u64) -> Node {
+fn node_to_node(name: String, data_node: &crate::node::DataNode, max_depth: Option<u64>) -> Node {
+    let reached_max_depth = match max_depth {
+        Some(max_depth) => max_depth == 0,
+        None => false,
+    };
+
     return Node {
         name,
-        kind: if data_node.sub_components.is_empty() || max_depth == 0 {
+        kind: if data_node.sub_components.is_empty() || reached_max_depth {
             NodeKind::Value(data_node.size)
         } else {
             NodeKind::Children(
@@ -29,7 +34,7 @@ fn node_to_node(name: String, data_node: &crate::node::DataNode, max_depth: u64)
                     .sub_components
                     .iter()
                     .map(|(name, data_node)| {
-                        node_to_node(name.to_string(), data_node, max_depth - 1)
+                        node_to_node(name.to_string(), data_node, max_depth.map(|d| d - 1))
                     })
                     .collect(),
             )
@@ -37,7 +42,7 @@ fn node_to_node(name: String, data_node: &crate::node::DataNode, max_depth: u64)
     };
 }
 
-pub fn export(data_node: HashMap<String, DataNode>, max_depth: u64) -> Node {
+pub fn export(data_node: HashMap<String, DataNode>, max_depth: Option<u64>) -> Node {
     let node = DataNode {
         size: 0,
         sub_components: data_node,
