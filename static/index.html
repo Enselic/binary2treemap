@@ -3,6 +3,7 @@
 <script src="d3.v7.min.js"></script>
 <script type="module">
 
+    // TODO: Proper attribution to https://observablehq.com/@d3/zoomable-treemap
     function zoomableTreemapChart() {
         // Specify the chart’s dimensions.
         const width = 928;
@@ -184,6 +185,6 @@
         .call(d3.axisLeft(y));
 
     // Append the SVG element.
-    container.append(svg.node());
+    container.append(zoomableTreemapChart());
 
 </script>
