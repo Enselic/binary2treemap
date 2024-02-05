@@ -1,11 +1,21 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 mod exporters;
 
 mod serve;
 
-mod node;
-use node::DataNode;
+
+
+/// TODO: Better name
+#[derive(Debug)]
+pub struct DataNode {
+    pub size: u64,
+    /// How the `size` bytes is distributed among the children.
+    pub sub_components: HashMap<String, DataNode>,
+}
 
 #[derive(clap::ValueEnum, Clone, Debug, PartialEq, Eq)]
 enum Format {
@@ -21,10 +31,6 @@ enum Format {
 )]
 #[command(flatten_help = true)]
 pub struct Args {
-    /// Path to binary to create a treemap for.
-    #[arg(long, value_name = "PATH")]
-    path: PathBuf,
-
     /// Maximum depth of the treemap.
     #[arg(long)]
     max_depth: Option<u64>,
@@ -32,11 +38,37 @@ pub struct Args {
     /// Output format.
     #[arg(long, default_value = "pretty-json")]
     format: Format,
+
+    /// Path to the binary file.
+    #[arg()]
+    path: Vec<PathBuf>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = <Args as clap::Parser>::parse();
-    let file_data = std::fs::read(args.path)?;
+
+    let mut to_serve = String::new();
+    let d3js = exporters::d3js::export(root_component, args.max_depth);
+    if args.format == Format::PrettyJSON {
+        let data = serde_json::to_string_pretty(&d3js)?;
+        println!("{data}");
+        to_serve = data.clone();
+    } else {
+        let data = serde_json::to_string(&d3js)?;
+        println!("{}", data.replace('\"', "\\\""));
+    }
+
+    serve::serve(to_serve);
+
+    Ok(())
+}
+
+struct TreemapData {
+
+}
+
+fn process_binary(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let file_data = std::fs::read(path)?;
     let object = object::File::parse(file_data.as_slice())?;
     let context = addr2line::Context::new(&object)?;
 
@@ -78,19 +110,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-
-    let mut to_serve = String::new();
-    let d3js = exporters::d3js::export(root_component, args.max_depth);
-    if args.format == Format::PrettyJSON {
-        let data = serde_json::to_string_pretty(&d3js)?;
-        println!("{data}");
-        to_serve = data.clone();
-    } else {
-        let data = serde_json::to_string(&d3js)?;
-        println!("{}", data.replace('\"', "\\\""));
-    }
-
-    serve::serve(to_serve);
-
-    Ok(())
 }
