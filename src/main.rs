@@ -63,6 +63,17 @@ pub struct TreemapData {
     pub children: HashMap<String, TreemapData>,
 }
 
+impl TreemapData {
+    fn increment_child_size(&mut self, key: impl ToString) -> &mut TreemapData {
+        let mut child = self
+            .children
+            .entry(key.to_string())
+            .or_insert_with(TreemapData::default);
+        child.size += 1;
+        child
+    }
+}
+
 fn process_binary(path: &Path) -> Result<TreemapData> {
     let mut treemap_data = TreemapData::default();
 
@@ -79,24 +90,13 @@ fn process_binary(path: &Path) -> Result<TreemapData> {
                     if component.is_empty() {
                         continue;
                     }
-                    let mut child = current
-                        .children
-                        .entry(component.to_string())
-                        .or_insert_with(TreemapData::default);
-                    child.size += 1;
-                    current = &mut child;
+                    current = current.increment_child_size(component);
                 }
             }
 
             // TODO: Do not treat line numbers as part of the file path.
             if let Some(line) = loc.line {
-                let line = line.to_string();
-                let mut child = current
-                    .children
-                    .entry(line)
-                    .or_insert_with(TreemapData::default);
-                child.size += 1;
-                current = &mut child;
+                current.increment_child_size(line);
             }
         }
     }
