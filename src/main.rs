@@ -9,12 +9,6 @@ mod serve;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-#[derive(clap::ValueEnum, Clone, Debug, PartialEq, Eq)]
-enum Format {
-    QuotedOnelineJSON,
-    PrettyJSON,
-}
-
 #[derive(clap::Parser, Debug)]
 #[command(
     version,
@@ -27,54 +21,23 @@ pub struct Args {
     #[arg(long)]
     max_depth: Option<u64>,
 
-    /// Output format.
-    #[arg(long, default_value = "pretty-json")]
-    format: Format,
-
-    /// Path to the binary file.
+    /// Path to the binary file. TODO: Support multiple files at once.
     #[arg()]
-    path: Vec<PathBuf>,
+    path: PathBuf,
 }
 
 fn main() -> Result<()> {
     let args = <Args as clap::Parser>::parse();
+    let treemap_data = process_binary(&args.path)?;
 
-    let mut to_serve = String::new();
-    let d3js = exporters::d3js::export(root_component, args.max_depth);
-    if args.format == Format::PrettyJSON {
-        let data = serde_json::to_string_pretty(&d3js)?;
-        println!("{data}");
-        to_serve = data.clone();
-    } else {
-        let data = serde_json::to_string(&d3js)?;
-        println!("{}", data.replace('\"', "\\\""));
-    }
-
-    serve::serve(to_serve);
+    // Serve the UI of this tool wich is a localhost web page.
+    serve::serve(&treemap_data);
 
     Ok(())
 }
 
-#[derive(Debug, Default)]
-pub struct TreemapData {
-    pub size: u64,
-
-    /// How the `size` bytes is distributed among the children.
-    pub children: HashMap<String, TreemapData>,
-}
-
-impl TreemapData {
-    fn increment_child_size(&mut self, key: impl ToString) -> &mut TreemapData {
-        let mut child = self
-            .children
-            .entry(key.to_string())
-            .or_insert_with(TreemapData::default);
-        child.size += 1;
-        child
-    }
-}
-
 fn process_binary(path: &Path) -> Result<TreemapData> {
+    // TODO: Set root size later.
     let mut treemap_data = TreemapData::default();
 
     let file_data = std::fs::read(path)?;
@@ -102,4 +65,25 @@ fn process_binary(path: &Path) -> Result<TreemapData> {
     }
 
     Ok(treemap_data)
+}
+
+#[derive(Debug, Default)]
+pub struct TreemapData {
+    /// The size in bytes of this node. This is the sum of the sizes of all its
+    /// children.
+    pub size: u64,
+
+    /// How the `size` is distributed among the children.
+    pub children: HashMap<String, TreemapData>,
+}
+
+impl TreemapData {
+    fn increment_child_size(&mut self, key: impl ToString) -> &mut TreemapData {
+        let mut child = self
+            .children
+            .entry(key.to_string())
+            .or_insert_with(TreemapData::default);
+        child.size += 1;
+        child
+    }
 }

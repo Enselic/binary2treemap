@@ -1,7 +1,9 @@
 use axum::response::Html;
 use axum::routing::get;
 
-pub fn serve(data: String) {
+use crate::TreemapData;
+
+pub fn serve(treemap_data: &TreemapData) {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
