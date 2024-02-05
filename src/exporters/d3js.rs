@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::node::DataNode;
+use crate::node::TreemapData;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -18,7 +18,7 @@ pub struct Node {
     kind: NodeKind,
 }
 
-fn node_to_node(name: String, data_node: &crate::node::DataNode, max_depth: Option<u64>) -> Node {
+fn node_to_node(name: String, data_node: &crate::node::TreemapData, max_depth: Option<u64>) -> Node {
     let reached_max_depth = match max_depth {
         Some(max_depth) => max_depth == 0,
         None => false,
@@ -42,8 +42,8 @@ fn node_to_node(name: String, data_node: &crate::node::DataNode, max_depth: Opti
     };
 }
 
-pub fn export(data_node: HashMap<String, DataNode>, max_depth: Option<u64>) -> Node {
-    let node = DataNode {
+pub fn export(data_node: HashMap<String, TreemapData>, max_depth: Option<u64>) -> Node {
+    let node = TreemapData {
         size: 0,
         sub_components: data_node,
     };

@@ -7,15 +7,7 @@ mod exporters;
 
 mod serve;
 
-
-
-/// TODO: Better name
-#[derive(Debug)]
-pub struct DataNode {
-    pub size: u64,
-    /// How the `size` bytes is distributed among the children.
-    pub sub_components: HashMap<String, DataNode>,
-}
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[derive(clap::ValueEnum, Clone, Debug, PartialEq, Eq)]
 enum Format {
@@ -44,7 +36,7 @@ pub struct Args {
     path: Vec<PathBuf>,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     let args = <Args as clap::Parser>::parse();
 
     let mut to_serve = String::new();
@@ -63,51 +55,51 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-struct TreemapData {
+#[derive(Debug, Default)]
+pub struct TreemapData {
+    pub size: u64,
 
+    /// How the `size` bytes is distributed among the children.
+    pub children: HashMap<String, TreemapData>,
 }
 
-fn process_binary(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn process_binary(path: &Path) -> Result<TreemapData> {
+    let mut treemap_data = TreemapData::default();
+
     let file_data = std::fs::read(path)?;
     let object = object::File::parse(file_data.as_slice())?;
     let context = addr2line::Context::new(&object)?;
-
-    let mut root_component: HashMap<String, DataNode> = HashMap::new();
-
-    let unknown: String = "unknown".to_string();
-
     let size = file_data.len();
     for probe in 0..size {
         if let Some(loc) = context.find_location(probe as u64).unwrap() {
-            if let Some(file2) = loc.file {
-                let file = file2.to_owned();
-                let mut file3: String = file.clone();
-                if let Some(loc) = loc.line {
-                    let loc = loc.to_string();
-                    file3 = format!("{}/{}", file, loc);
-                }
-                let mut current_component: &mut HashMap<String, DataNode> = &mut root_component;
-                for component in file3.split('/') {
-                    let owned = component.to_owned();
-                    if owned.is_empty() {
+            let mut current = &mut treemap_data;
+
+            if let Some(file) = loc.file {
+                for component in file.split('/') {
+                    if component.is_empty() {
                         continue;
                     }
-                    let entry = current_component.entry(owned).or_insert_with(|| DataNode {
-                        size: 0,
-                        sub_components: HashMap::new(),
-                    });
-                    entry.size += 1;
-                    current_component = &mut entry.sub_components;
+                    let mut child = current
+                        .children
+                        .entry(component.to_string())
+                        .or_insert_with(TreemapData::default);
+                    child.size += 1;
+                    current = &mut child;
                 }
-            } else {
-                root_component
-                    .entry(unknown.clone())
-                    .or_insert_with(|| DataNode {
-                        size: 0,
-                        sub_components: HashMap::new(),
-                    })
-                    .size += 1;
+            }
+
+            // TODO: Do not treat line numbers as part of the file path.
+            if let Some(line) = loc.line {
+                let line = line.to_string();
+                let mut child = current
+                    .children
+                    .entry(line)
+                    .or_insert_with(TreemapData::default);
+                child.size += 1;
+                current = &mut child;
             }
         }
     }
+
+    Ok(treemap_data)
 }
