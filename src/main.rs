@@ -67,7 +67,7 @@ fn process_binary(path: &Path) -> Result<TreemapData> {
     Ok(treemap_data)
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct TreemapData {
     /// The size in bytes of this node. This is the sum of the sizes of all its
     /// children.
