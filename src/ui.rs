@@ -36,10 +36,12 @@ impl<'d> TreemapData {
 async fn serve_impl(treemap_data: TreemapData) -> Result<()> {
     // build our application with a route
     let app = axum::Router::new()
+        .route("/__debug__", get(debug_treemap_data))
         .route(
             "/d3.v7.min.js",
             get(Html(include_str!("../static/d3.v7.min.js").to_owned())),
         )
+        .route("/", get(treemap_page))
         .route("/*key", get(treemap_page))
         .with_state(Arc::new(treemap_data));
 
@@ -49,7 +51,15 @@ async fn serve_impl(treemap_data: TreemapData) -> Result<()> {
     Ok(axum::serve(listener, app).await?)
 }
 
-async fn treemap_page(State(state): State<Arc<TreemapData>>, path: Path<String>) -> Html<String> {
+#[derive(serde_derive::Serialize)]
+struct HbsData {
+    data: String,
+}
+
+async fn treemap_page(
+    State(state): State<Arc<TreemapData>>,
+    path: Option<Path<String>>,
+) -> Html<String> {
     use handlebars::Handlebars;
     let mut handlebars = Handlebars::new();
     handlebars.register_escape_fn(no_escape);
@@ -57,25 +67,37 @@ async fn treemap_page(State(state): State<Arc<TreemapData>>, path: Path<String>)
     // register the template. The template string will be verified and compiled.
     let source = include_str!("../static/index.hbs");
     assert!(handlebars.register_template_string("index", source).is_ok());
-    if let Some(data) = state.for_path(&path) {
-        #[derive(serde_derive::Serialize)]
-        struct HbsData {
-            data: String,
+    if let Some(path) = path {
+        if let Some(data) = state.for_path(&path) {
+            Html(
+                handlebars
+                    .render(
+                        "index",
+                        &HbsData {
+                            data: serde_json::to_string(data).unwrap(),
+                        },
+                    )
+                    .unwrap(),
+            )
+        } else {
+            Html(format!(
+                "ERROR: Could not find {path:?} in <pre>{state:#?}</pre>"
+            ))
         }
-        eprintln!("NORDH1 {data:#?} NORDH2");
+    } else {
         Html(
             handlebars
                 .render(
                     "index",
                     &HbsData {
-                        data: serde_json::to_string(data).unwrap(),
+                        data: serde_json::to_string(&state.as_ref()).unwrap(),
                     },
                 )
                 .unwrap(),
         )
-    } else {
-        Html(format!(
-            "ERROR: Could not find {path:?} in <pre>{state:#?}</pre>"
-        ))
     }
+}
+
+async fn debug_treemap_data(State(state): State<Arc<TreemapData>>) -> Html<String> {
+    Html(format!("<pre>{state:#?}</pre>"))
 }
