@@ -57,7 +57,7 @@
 
             node.filter(d => d === root ? d.parent : d.children)
                 .attr("cursor", "pointer")
-                .on("click", (event, d) => d === root ? zoomout(root) : zoomin(d));
+                .on("click", (event, d) => window.location = window.location + "/" + d.data.name);
 
             node.append("title")
                 .text(d => `${name(d)}\n${format(d.value)}`);
