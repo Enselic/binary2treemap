@@ -30,25 +30,27 @@ fn main() -> Result<()> {
     let args = <Args as clap::Parser>::parse();
 
     println!("Processing {:?}, please wait", &args.path);
-    let treemap_data = process_binary(&args.path)?;
+    let treemap_data = process_binary(&args, &args.path)?;
 
     // Serve the UI (localhost web page).
     Ok(ui::serve(treemap_data)?)
 }
 
-fn process_binary(path: &Path) -> Result<TreemapData> {
+fn process_binary(args: &Args, path: &Path) -> Result<TreemapData> {
     let file_data = std::fs::read(path)?;
     let object = object::File::parse(file_data.as_slice())?;
     let context = addr2line::Context::new(&object)?;
     let size = file_data.len();
 
     let mut treemap_data = TreemapData::default();
-    for probe in 0..size {
+    'outer: for probe in 0..size {
         if let Some(loc) = context.find_location(probe as u64).unwrap() {
             // The root is a special case so manually increment the size here.
             // Note that we only care about bytes that have an associated debug
             // info location so we can map it.
             treemap_data.sum += 1;
+
+            let mut depth = 1;
 
             let mut current = &mut treemap_data;
             if let Some(file) = loc.file {
@@ -56,6 +58,14 @@ fn process_binary(path: &Path) -> Result<TreemapData> {
                     if component.is_empty() {
                         continue;
                     }
+
+                    depth += 1;
+                    if let Some(max_depth) = args.max_depth {
+                        if depth > max_depth {
+                            break 'outer;
+                        }
+                    }
+
                     current = current.increment_child(component);
                 }
             }

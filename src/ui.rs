@@ -56,6 +56,7 @@ async fn treemap_page(State(state): State<Arc<TreemapData>>, path: Path<String>)
     let source = include_str!("../static/index.hbs");
     assert!(handlebars.register_template_string("data", source).is_ok());
     if let Some(data) = state.for_path(&path) {
+        eprintln!("NORDH1 {data:#?} NORDH2");
         Html(handlebars.render("data", data).unwrap())
     } else {
         Html(format!("ERROR: Could not find {path:?} in <pre>{state:#?}</pre>"))
