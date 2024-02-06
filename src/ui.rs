@@ -1,3 +1,4 @@
+use std::io::Result;
 use std::sync::Arc;
 
 use axum::extract::{Path, State};
@@ -6,12 +7,12 @@ use axum::routing::get;
 
 use crate::TreemapData;
 
-pub fn serve(treemap_data: TreemapData) {
+pub fn serve(treemap_data: TreemapData) -> Result<()> {
     let rt = tokio::runtime::Builder::new_current_thread()
         .build()
         .unwrap();
 
-    rt.block_on(serve_impl(treemap_data));
+    rt.block_on(serve_impl(treemap_data))
 }
 
 impl<'d> TreemapData {
@@ -30,7 +31,7 @@ impl<'d> TreemapData {
     }
 }
 
-async fn serve_impl(treemap_data: TreemapData) {
+async fn serve_impl(treemap_data: TreemapData) -> Result<()> {
     // build our application with a route
     let app = axum::Router::new()
         .route(
@@ -41,11 +42,9 @@ async fn serve_impl(treemap_data: TreemapData) {
         .with_state(Arc::new(treemap_data));
 
     // run it
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
-        .await
-        .unwrap();
-    println!("listening on http://{}", listener.local_addr().unwrap());
-    axum::serve(listener, app).await.unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;
+    println!("listening on http://{}", listener.local_addr()?);
+    Ok(axum::serve(listener, app).await?)
 }
 
 async fn treemap_page(State(state): State<Arc<TreemapData>>, path: Path<String>) -> String {

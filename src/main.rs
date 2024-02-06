@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-mod exporters;
+//mod exporters;
 
 mod ui;
 
@@ -28,12 +28,9 @@ pub struct Args {
 
 fn main() -> Result<()> {
     let args = <Args as clap::Parser>::parse();
-    let treemap_data = process_binary(&args.path)?;
 
     // Serve the UI of this tool wich is a localhost web page.
-    ui::serve(&treemap_data);
-
-    Ok(())
+    Ok(ui::serve(process_binary(&args.path)?)?)
 }
 
 fn process_binary(path: &Path) -> Result<TreemapData> {
@@ -79,7 +76,7 @@ pub struct TreemapData {
 
 impl TreemapData {
     fn increment_child_size(&mut self, key: impl ToString) -> &mut TreemapData {
-        let mut child = self
+        let child = self
             .children
             .entry(key.to_string())
             .or_insert_with(TreemapData::default);
