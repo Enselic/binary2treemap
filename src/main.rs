@@ -73,11 +73,22 @@ fn process_binary(path: &Path) -> Result<TreemapData> {
 #[derive(Debug, Default, Clone, serde_derive::Serialize)]
 pub struct TreemapData {
     /// The size in bytes of this node. This is the sum of the sizes of all its
-    /// children.
+    /// children. We call the field `sum` for easy interopability with d3js.
     pub sum: u64,
 
     /// How the `size` is distributed among the children.
+    #[serde(serialize_with = "hash_map_values_to_vec")]
     pub children: HashMap<String, TreemapData>,
+}
+
+fn hash_map_values_to_vec<S>(
+    value: &HashMap<String, TreemapData>,
+    serializer: S,
+) -> std::result::Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serde::Serialize::serialize(&value.values().collect::<Vec<_>>(), serializer)
 }
 
 impl TreemapData {
