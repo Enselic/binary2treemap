@@ -29,8 +29,11 @@ pub struct Args {
 fn main() -> Result<()> {
     let args = <Args as clap::Parser>::parse();
 
+    println!("Processing {:?}, please wait", &args.path);
+    let treemap_data = process_binary(&args.path)?;
+
     // Serve the UI of this tool wich is a localhost web page.
-    Ok(ui::serve(process_binary(&args.path)?)?)
+    Ok(ui::serve(treemap_data)?)
 }
 
 fn process_binary(path: &Path) -> Result<TreemapData> {

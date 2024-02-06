@@ -9,6 +9,7 @@ use crate::TreemapData;
 
 pub fn serve(treemap_data: TreemapData) -> Result<()> {
     let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
         .build()
         .unwrap();
 
@@ -38,7 +39,7 @@ async fn serve_impl(treemap_data: TreemapData) -> Result<()> {
             "/d3.v7.min.js",
             get(Html(include_str!("../static/d3.v7.min.js").to_owned())),
         )
-        .route("/*", get(treemap_page))
+        .route("/*key", get(treemap_page))
         .with_state(Arc::new(treemap_data));
 
     // run it
