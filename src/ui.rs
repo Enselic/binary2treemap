@@ -69,10 +69,6 @@ struct HbsData {
     data: String,
 }
 
-async fn data_handler(State(state): State<UiState>, path: Option<Path<String>>) -> Json<String> {
-    Json(serde_json::to_string(&state.treemap_data.for_path(&path)).unwrap())
-}
-
 async fn page_handler(State(state): State<UiState>, path: Option<Path<String>>) -> Html<String> {
     use handlebars::Handlebars;
     // TODO: Cache.
@@ -94,9 +90,13 @@ async fn page_handler(State(state): State<UiState>, path: Option<Path<String>>) 
         )
     } else {
         Html(format!(
-            "ERROR: Could not find {path:?} in <pre>{state:#?}</pre>"
+            "ERROR: Could not find {path:?}. Maybe you want to visit <a href=\"/__debug__\""
         ))
     }
+}
+
+async fn data_handler(State(state): State<UiState>, path: Option<Path<String>>) -> Json<String> {
+    Json(serde_json::to_string(&state.treemap_data.for_path(&path)).unwrap())
 }
 
 async fn debug_treemap_data(State(state): State<UiState>) -> Html<String> {
