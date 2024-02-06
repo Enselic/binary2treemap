@@ -26,7 +26,6 @@
 
         // Compute the layout.
         const hierarchy = d3.hierarchy(data)
-            .sum(d => d.value)
             .sort((a, b) => b.value - a.value);
         const root = d3.treemap().tile(tile)(hierarchy);
 
