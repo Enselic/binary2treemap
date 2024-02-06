@@ -17,7 +17,7 @@ pub fn serve(treemap_data: TreemapData) -> Result<()> {
 }
 
 impl<'d> TreemapData {
-    fn for_path(&'d self, path: Path<String>) -> Option<&'d TreemapData> {
+    fn for_path(&'d self, path: &Path<String>) -> Option<&'d TreemapData> {
         let mut current = self;
         for component in path.split('/') {
             if component.is_empty() {
@@ -55,10 +55,9 @@ async fn treemap_page(State(state): State<Arc<TreemapData>>, path: Path<String>)
     // register the template. The template string will be verified and compiled.
     let source = include_str!("../static/index.hbs");
     assert!(handlebars.register_template_string("data", source).is_ok());
-
-    Html(
-        handlebars
-            .render("data", state.for_path(path).unwrap())
-            .unwrap(),
-    )
+    if let Some(data) = state.for_path(&path) {
+        Html(handlebars.render("data", data).unwrap())
+    } else {
+        Html(format!("ERROR: Could not find {path:?} in <pre>{state:#?}</pre>"))
+    }
 }
