@@ -5,7 +5,6 @@ use axum::extract::{Path, State};
 use axum::response::Html;
 use axum::routing::get;
 use axum::Json;
-use handlebars::no_escape;
 
 use crate::TreemapData;
 
@@ -66,37 +65,38 @@ async fn serve_impl(treemap_data: TreemapData) -> Result<()> {
 
 #[derive(serde_derive::Serialize)]
 struct HbsData {
-    data: String,
+    path: String,
 }
 
-async fn page_handler(State(state): State<UiState>, path: Option<Path<String>>) -> Html<String> {
+async fn page_handler(path: Option<Path<String>>) -> Html<String> {
     use handlebars::Handlebars;
     // TODO: Cache.
     let mut handlebars = Handlebars::new();
-    handlebars.register_escape_fn(no_escape);
 
     let source = include_str!("../static/index.hbs");
     assert!(handlebars.register_template_string("index", source).is_ok());
-    if let Some(data) = state.treemap_data.for_path(&path) {
-        Html(
-            handlebars
-                .render(
-                    "index",
-                    &HbsData {
-                        data: serde_json::to_string(data).unwrap(),
-                    },
-                )
-                .unwrap(),
-        )
-    } else {
-        Html(format!(
-            "ERROR: Could not find {path:?}. Maybe you want to visit <a href=\"/__debug__\""
-        ))
-    }
+    Html(
+        handlebars
+            .render(
+                "index",
+                &HbsData {
+                    path: path.map(|p| p.0).unwrap_or_default(),
+                },
+            )
+            .unwrap(),
+    )
+    // } else {
+    //     Html(format!(
+    //         "ERROR: Could not find {path:?}. Maybe you want to visit <a href=\"/__debug__\""
+    //     ))
+    // }
 }
 
-async fn data_handler(State(state): State<UiState>, path: Option<Path<String>>) -> Json<String> {
-    Json(serde_json::to_string(&state.treemap_data.for_path(&path)).unwrap())
+async fn data_handler(
+    State(state): State<UiState>,
+    path: Option<Path<String>>,
+) -> Json<TreemapData> {
+    Json(state.treemap_data.for_path(&path).unwrap().clone())
 }
 
 async fn debug_treemap_data(State(state): State<UiState>) -> Html<String> {
