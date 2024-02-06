@@ -5,7 +5,7 @@ use std::{
 
 mod exporters;
 
-mod serve;
+mod ui;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -17,13 +17,13 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 )]
 #[command(flatten_help = true)]
 pub struct Args {
+    /// Path to the binary file.
+    #[arg()]
+    path: PathBuf,
+
     /// Maximum depth of the treemap.
     #[arg(long)]
     max_depth: Option<u64>,
-
-    /// Path to the binary file. TODO: Support multiple files at once.
-    #[arg()]
-    path: PathBuf,
 }
 
 fn main() -> Result<()> {
@@ -31,7 +31,7 @@ fn main() -> Result<()> {
     let treemap_data = process_binary(&args.path)?;
 
     // Serve the UI of this tool wich is a localhost web page.
-    serve::serve(&treemap_data);
+    ui::serve(&treemap_data);
 
     Ok(())
 }
