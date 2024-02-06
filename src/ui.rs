@@ -41,7 +41,12 @@ async fn serve_impl(treemap_data: TreemapData) -> Result<()> {
             "/d3.v7.min.js",
             get(Html(include_str!("../static/d3.v7.min.js").to_owned())),
         )
+        .route(
+            "/d3.v7.js",
+            get(Html(include_str!("../vendor/d3.v7.js").to_owned())),
+        )
         .route("/", get(treemap_page))
+        .route("/data.json?path=:path", get(treemap_page))
         .route("/*key", get(treemap_page))
         .with_state(Arc::new(treemap_data));
 
