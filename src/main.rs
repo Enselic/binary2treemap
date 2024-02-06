@@ -30,40 +30,36 @@ fn main() -> Result<()> {
     let args = <Args as clap::Parser>::parse();
 
     println!("Processing {:?}, please wait", &args.path);
-    let treemap_data = process_binary(&args, &args.path)?;
+    let treemap_data = process_binary(&args.path)?;
 
     // Serve the UI (localhost web page).
     Ok(ui::serve(treemap_data)?)
 }
 
-fn process_binary(args: &Args, path: &Path) -> Result<TreemapData> {
+fn process_binary(path: &Path) -> Result<TreemapData> {
     let file_data = std::fs::read(path)?;
     let object = object::File::parse(file_data.as_slice())?;
     let context = addr2line::Context::new(&object)?;
     let size = file_data.len();
 
-    let mut treemap_data = TreemapData::default();
-    'outer: for probe in 0..size {
+    let mut treemap_data = TreemapData {
+        name: path.to_string_lossy().to_string(),
+        sum: 0,
+        children: HashMap::new(),
+    };
+
+    for probe in 0..size {
         if let Some(loc) = context.find_location(probe as u64).unwrap() {
             // The root is a special case so manually increment the size here.
             // Note that we only care about bytes that have an associated debug
             // info location so we can map it.
             treemap_data.sum += 1;
 
-            let mut depth = 1;
-
             let mut current = &mut treemap_data;
             if let Some(file) = loc.file {
                 for component in file.split('/') {
                     if component.is_empty() {
                         continue;
-                    }
-
-                    depth += 1;
-                    if let Some(max_depth) = args.max_depth {
-                        if depth > max_depth {
-                            break 'outer;
-                        }
                     }
 
                     current = current.increment_child(component);
@@ -80,8 +76,10 @@ fn process_binary(args: &Args, path: &Path) -> Result<TreemapData> {
     Ok(treemap_data)
 }
 
-#[derive(Debug, Default, Clone, serde_derive::Serialize)]
+#[derive(Debug, Clone, serde_derive::Serialize)]
 pub struct TreemapData {
+    pub name: String,
+
     /// The size in bytes of this node. This is the sum of the sizes of all its
     /// children. We call the field `sum` for easy interopability with d3js.
     pub sum: u64,
@@ -106,7 +104,11 @@ impl TreemapData {
         let child = self
             .children
             .entry(key.to_string())
-            .or_insert_with(TreemapData::default);
+            .or_insert_with(|| TreemapData {
+                name: key.to_string(),
+                sum: 0,
+                children: HashMap::new(),
+            });
         child.sum += 1;
         child
     }

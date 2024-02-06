@@ -4,6 +4,7 @@ use std::sync::Arc;
 use axum::extract::{Path, State};
 use axum::response::Html;
 use axum::routing::get;
+use handlebars::no_escape;
 
 use crate::TreemapData;
 
@@ -51,14 +52,30 @@ async fn serve_impl(treemap_data: TreemapData) -> Result<()> {
 async fn treemap_page(State(state): State<Arc<TreemapData>>, path: Path<String>) -> Html<String> {
     use handlebars::Handlebars;
     let mut handlebars = Handlebars::new();
+    handlebars.register_escape_fn(no_escape);
 
     // register the template. The template string will be verified and compiled.
     let source = include_str!("../static/index.hbs");
-    assert!(handlebars.register_template_string("data", source).is_ok());
+    assert!(handlebars.register_template_string("index", source).is_ok());
     if let Some(data) = state.for_path(&path) {
+        #[derive(serde_derive::Serialize)]
+        struct HbsData {
+            data: String,
+        }
         eprintln!("NORDH1 {data:#?} NORDH2");
-        Html(handlebars.render("data", data).unwrap())
+        Html(
+            handlebars
+                .render(
+                    "index",
+                    &HbsData {
+                        data: serde_json::to_string(data).unwrap(),
+                    },
+                )
+                .unwrap(),
+        )
     } else {
-        Html(format!("ERROR: Could not find {path:?} in <pre>{state:#?}</pre>"))
+        Html(format!(
+            "ERROR: Could not find {path:?} in <pre>{state:#?}</pre>"
+        ))
     }
 }
