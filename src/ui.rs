@@ -4,9 +4,13 @@ use std::sync::Arc;
 use axum::extract::{Path, State};
 use axum::response::Html;
 use axum::routing::get;
+use axum::Json;
 use handlebars::no_escape;
 
 use crate::TreemapData;
+
+/// `curl -L https://d3js.org/d3.v7.js -o vendor/d3.v7.js`
+const D3_JS: Html<&'static str> = Html(include_str!("../vendor/d3.v7.js"));
 
 pub fn serve(treemap_data: TreemapData) -> Result<()> {
     let rt = tokio::runtime::Builder::new_current_thread()
@@ -18,7 +22,12 @@ pub fn serve(treemap_data: TreemapData) -> Result<()> {
 }
 
 impl<'d> TreemapData {
-    fn for_path(&'d self, path: &Path<String>) -> Option<&'d TreemapData> {
+    fn for_path(&'d self, path: &Option<Path<String>>) -> Option<&'d TreemapData> {
+        let path = match path {
+            Some(path) => path.as_str(),
+            None => return Some(self),
+        };
+
         let mut current = self;
         for component in path.split('/') {
             if component.is_empty() {
@@ -33,24 +42,23 @@ impl<'d> TreemapData {
     }
 }
 
+#[derive(Debug, Clone)]
+struct UiState {
+    treemap_data: Arc<TreemapData>,
+}
+
 async fn serve_impl(treemap_data: TreemapData) -> Result<()> {
-    // build our application with a route
     let app = axum::Router::new()
         .route("/__debug__", get(debug_treemap_data))
-        .route(
-            "/d3.v7.min.js",
-            get(Html(include_str!("../static/d3.v7.min.js").to_owned())),
-        )
-        .route(
-            "/d3.v7.js",
-            get(Html(include_str!("../vendor/d3.v7.js").to_owned())),
-        )
-        .route("/", get(treemap_page))
-        .route("/data.json?path=:path", get(treemap_page))
-        .route("/*key", get(treemap_page))
-        .with_state(Arc::new(treemap_data));
+        .route("/__vendor__/d3.v7.js", get(D3_JS))
+        .route("/__data__/", get(data_handler))
+        .route("/__data__/*key", get(data_handler))
+        .route("/", get(page_handler))
+        .route("/*key", get(page_handler))
+        .with_state(UiState {
+            treemap_data: Arc::new(treemap_data),
+        });
 
-    // run it
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;
     println!("listening on http://{}", listener.local_addr()?);
     Ok(axum::serve(listener, app).await?)
@@ -61,48 +69,36 @@ struct HbsData {
     data: String,
 }
 
-async fn treemap_page(
-    State(state): State<Arc<TreemapData>>,
-    path: Option<Path<String>>,
-) -> Html<String> {
+async fn data_handler(State(state): State<UiState>, path: Option<Path<String>>) -> Json<String> {
+    Json(serde_json::to_string(&state.treemap_data.for_path(&path)).unwrap())
+}
+
+async fn page_handler(State(state): State<UiState>, path: Option<Path<String>>) -> Html<String> {
     use handlebars::Handlebars;
+    // TODO: Cache.
     let mut handlebars = Handlebars::new();
     handlebars.register_escape_fn(no_escape);
 
-    // register the template. The template string will be verified and compiled.
     let source = include_str!("../static/index.hbs");
     assert!(handlebars.register_template_string("index", source).is_ok());
-    if let Some(path) = path {
-        if let Some(data) = state.for_path(&path) {
-            Html(
-                handlebars
-                    .render(
-                        "index",
-                        &HbsData {
-                            data: serde_json::to_string(data).unwrap(),
-                        },
-                    )
-                    .unwrap(),
-            )
-        } else {
-            Html(format!(
-                "ERROR: Could not find {path:?} in <pre>{state:#?}</pre>"
-            ))
-        }
-    } else {
+    if let Some(data) = state.treemap_data.for_path(&path) {
         Html(
             handlebars
                 .render(
                     "index",
                     &HbsData {
-                        data: serde_json::to_string(&state.as_ref()).unwrap(),
+                        data: serde_json::to_string(data).unwrap(),
                     },
                 )
                 .unwrap(),
         )
+    } else {
+        Html(format!(
+            "ERROR: Could not find {path:?} in <pre>{state:#?}</pre>"
+        ))
     }
 }
 
-async fn debug_treemap_data(State(state): State<Arc<TreemapData>>) -> Html<String> {
+async fn debug_treemap_data(State(state): State<UiState>) -> Html<String> {
     Html(format!("<pre>{state:#?}</pre>"))
 }

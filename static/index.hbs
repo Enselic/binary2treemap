@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <div id="container"></div>
-<script src="/d3.v7.js"></script>
+<script src="/__vendor__/d3.v7.js"></script>
 <script type="module">
 
-    const hbs_data = {{data}}
 
     // TODO: Proper attribution to https://observablehq.com/@d3/zoomable-treemap
     function zoomableTreemapChart(data) {
@@ -70,7 +69,7 @@
             node.append("clipPath")
                 //.attr("id", d => (d.clipUid = DOM.uid("clip")).id)
                 .append("use")
-                //.attr("xlink:href", d => d.leafUid.href);
+            //.attr("xlink:href", d => d.leafUid.href);
 
             node.append("text")
                 .attr("clip-path", d => d.clipUid)
@@ -132,7 +131,19 @@
         return svg.node();
     }
 
-    // Append the SVG element.
-    container.append(zoomableTreemapChart(hbs_data));
-    
+    fetch('/__data__/{{path}}')
+        .then(response => {
+            // Check if the request was successful
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json(); // Parse the response body as JSON
+        })
+        .then(data => {
+            // Append the SVG element.
+            container.append(zoomableTreemapChart(data));
+        })
+        .catch(error => {
+            console.error('There was a problem with your fetch operation:', error);
+        });
 </script>
