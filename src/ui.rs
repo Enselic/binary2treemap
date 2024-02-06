@@ -49,5 +49,20 @@ async fn serve_impl(treemap_data: TreemapData) -> Result<()> {
 }
 
 async fn treemap_page(State(state): State<Arc<TreemapData>>, path: Path<String>) -> String {
+
+    use handlebars::Handlebars;
+    let mut handlebars = Handlebars::new();
+  
+    // register the template. The template string will be verified and compiled.
+    let source = "hello {{world}}";
+    assert!(handlebars.register_template_string("t1", source).is_ok());
+  
+    // Prepare some data.
+    //
+    // The data type should implements `serde::Serialize`
+    let mut data = BTreeMap::new();
+    data.insert("world".to_string(), "世界!".to_string());
+    assert_eq!(handlebars.render("t1", &data).unwrap(), "hello 世界!");
+  
     format!("Hello, World! {}", state.for_path(path).unwrap().size)
 }

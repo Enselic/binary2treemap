@@ -32,34 +32,37 @@ fn main() -> Result<()> {
     println!("Processing {:?}, please wait", &args.path);
     let treemap_data = process_binary(&args.path)?;
 
-    // Serve the UI of this tool wich is a localhost web page.
+    // Serve the UI (localhost web page).
     Ok(ui::serve(treemap_data)?)
 }
 
 fn process_binary(path: &Path) -> Result<TreemapData> {
-    // TODO: Set root size later.
-    let mut treemap_data = TreemapData::default();
-
     let file_data = std::fs::read(path)?;
     let object = object::File::parse(file_data.as_slice())?;
     let context = addr2line::Context::new(&object)?;
     let size = file_data.len();
+
+    let mut treemap_data = TreemapData::default();
     for probe in 0..size {
         if let Some(loc) = context.find_location(probe as u64).unwrap() {
-            let mut current = &mut treemap_data;
+            // The root is a special case so manually increment the size here.
+            // Note that we only care about bytes that have an associated debug
+            // info location so we can map it.
+            treemap_data.size += 1;
 
+            let mut current = &mut treemap_data;
             if let Some(file) = loc.file {
                 for component in file.split('/') {
                     if component.is_empty() {
                         continue;
                     }
-                    current = current.increment_child_size(component);
+                    current = current.increment_child(component);
                 }
             }
 
             // TODO: Do not treat line numbers as part of the file path.
             if let Some(line) = loc.line {
-                current.increment_child_size(line);
+                current.increment_child(line);
             }
         }
     }
@@ -78,7 +81,7 @@ pub struct TreemapData {
 }
 
 impl TreemapData {
-    fn increment_child_size(&mut self, key: impl ToString) -> &mut TreemapData {
+    fn increment_child(&mut self, key: impl ToString) -> &mut TreemapData {
         let child = self
             .children
             .entry(key.to_string())
