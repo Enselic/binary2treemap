@@ -48,7 +48,7 @@ fn process_binary(path: &Path) -> Result<TreemapData> {
             // The root is a special case so manually increment the size here.
             // Note that we only care about bytes that have an associated debug
             // info location so we can map it.
-            treemap_data.size += 1;
+            treemap_data.sum += 1;
 
             let mut current = &mut treemap_data;
             if let Some(file) = loc.file {
@@ -70,11 +70,11 @@ fn process_binary(path: &Path) -> Result<TreemapData> {
     Ok(treemap_data)
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, serde_derive::Serialize)]
 pub struct TreemapData {
     /// The size in bytes of this node. This is the sum of the sizes of all its
     /// children.
-    pub size: u64,
+    pub sum: u64,
 
     /// How the `size` is distributed among the children.
     pub children: HashMap<String, TreemapData>,
@@ -86,7 +86,7 @@ impl TreemapData {
             .children
             .entry(key.to_string())
             .or_insert_with(TreemapData::default);
-        child.size += 1;
+        child.sum += 1;
         child
     }
 }

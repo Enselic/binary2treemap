@@ -64,5 +64,5 @@ async fn treemap_page(State(state): State<Arc<TreemapData>>, path: Path<String>)
     data.insert("world".to_string(), "世界!".to_string());
     assert_eq!(handlebars.render("t1", &data).unwrap(), "hello 世界!");
   
-    format!("Hello, World! {}", state.for_path(path).unwrap().size)
+    format!("Hello, World! {}", state.for_path(path).unwrap().sum)
 }
