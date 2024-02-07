@@ -32,7 +32,11 @@ jobs:
       VERSION: ${{ steps.version.outputs.VERSION }}
       TAG_NAME: ${{ steps.version.outputs.TAG_NAME }}
     steps:
-      - run: echo "::add-mask::${{ inputs.one_time_crates_io_token_secret }}"
+      - run: |
+          # See https://github.com/actions/runner/issues/643#issuecomment-708468716
+          # See https://github.com/actions/runner/issues/475#issuecomment-635775403
+          masked_secret=$(jq -r '.inputs.one_time_crates_io_token_secret' $GITHUB_EVENT_PATH)
+          echo "::add-mask::$masked_secret"
       - uses: actions/checkout@v3
       - run: cargo publish
         env:
