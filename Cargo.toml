@@ -2,7 +2,7 @@
 edition = "2021"
 name = "binary2treemap"
 version = "0.0.2"
-description = "Create a treemap of the source code of each byte in a binary. Investigate binary bloat."
+description = "Map each byte in a compiled binary to the corresponding source code file and line. Helps investigate binary bloat."
 homepage = "https://github.com/Enselic/binary2treemap"
 documentation = "https://docs.rs/binary2treemap"
 readme = "README.md"
