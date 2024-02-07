@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "binary2treemap"
-version = "0.0.1"
+version = "0.0.2"
 description = "Create a treemap of the source code of each byte in a binary. Investigate binary bloat."
 homepage = "https://github.com/Enselic/binary2treemap"
 documentation = "https://docs.rs/binary2treemap"
