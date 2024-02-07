@@ -8,9 +8,6 @@ use axum::Json;
 
 use crate::TreemapData;
 
-/// `curl -L https://d3js.org/d3.v7.js -o vendor/d3.v7.js`
-const D3_JS: Html<&'static str> = Html(include_str!("../vendor/d3.v7.js"));
-
 pub fn serve(treemap_data: TreemapData) -> Result<()> {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_io()
@@ -49,7 +46,6 @@ struct UiState {
 async fn serve_impl(treemap_data: TreemapData) -> Result<()> {
     let app = axum::Router::new()
         .route("/__debug__", get(debug_treemap_data))
-        .route("/__vendor__/d3.v7.js", get(D3_JS))
         .route("/__data__/", get(data_handler))
         .route("/__data__/*key", get(data_handler))
         .route("/", get(page_handler))

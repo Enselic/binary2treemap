@@ -35,4 +35,6 @@ features = ["read"]
 version = "1.0.196"
 
 [profile.release]
+# So we can use this tool on our own release builds. Note that codgen is still
+# optimized, thus just adds debug info to the binary.
 debug = true
