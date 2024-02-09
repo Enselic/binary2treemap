@@ -8,23 +8,18 @@ name: Release
 
 on:
   workflow_dispatch: # This workflow can only be triggered manually.
-    inputs:
-      one_time_crates_io_token_secret:
-        description: "A one-time crates.io token (delete it after first use)"
-        required: true
-        type: string
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   # Make sure regular CI passes before we make a release.
-  # ci:
-  #   uses: ./.github/workflows/CI.yml
+  ci:
+    uses: ./.github/workflows/CI.yml
 
   # After regular CI passes we publish to crates.io and push a git tag.
   publish-and-tag:
-    # needs: ci
+    needs: ci
     runs-on: ubuntu-latest
     permissions:
       contents: write # So we can push a tag.
@@ -32,15 +27,10 @@ jobs:
       VERSION: ${{ steps.version.outputs.VERSION }}
       TAG_NAME: ${{ steps.version.outputs.TAG_NAME }}
     steps:
-      - run: |
-          # See https://github.com/actions/runner/issues/643#issuecomment-708468716
-          # See https://github.com/actions/runner/issues/475#issuecomment-635775403
-          masked_secret=$(jq -r '.inputs.one_time_crates_io_token_secret' $GITHUB_EVENT_PATH)
-          echo "::add-mask::$masked_secret"
       - uses: actions/checkout@v4
       - run: cargo publish
         env:
-          CARGO_REGISTRY_TOKEN: ${{ inputs.one_time_crates_io_token_secret }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
       - name: version
         id: version
         run: |
