@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -o nounset -o pipefail -o errexit -o xtrace
 
-# CI sets this, so we should too
-export CARGO_TERM_COLOR=always
-
 cargo fmt -- --check
 
 export RUSTDOCFLAGS='--deny warnings'
