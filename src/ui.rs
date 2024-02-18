@@ -72,9 +72,14 @@ async fn page_handler(path: Option<Path<String>>) -> Html<String> {
 
     if matches!(
         path.as_ref().map(|p| p.0.as_str()),
-        Some("/home/martin/src/binary2treemap/src/ui.rs")
+        Some("home/martin/src/binary2treemap/src/ui.rs")
     ) {
-        return Html("yeeeeep".to_string());
+        let full_path = format!("/{}", path.unwrap().0);
+        let syntax_set = syntect::parsing::SyntaxSet::load_defaults_newlines();
+        let themes = syntect::highlighting::ThemeSet::load_defaults().themes;
+        let theme = themes.get("base16-ocean.dark").unwrap();
+        let high = syntect::html::highlighted_html_for_file(full_path, &syntax_set, theme).unwrap();
+        return Html(high);
     }
 
     let source = include_str!("../static/index.hbs");

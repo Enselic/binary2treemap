@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     hash::Hash,
-    path::{Path, PathBuf}, vec,
+    path::{Path, PathBuf},
 };
 
 mod ui;
