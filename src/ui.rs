@@ -1,10 +1,14 @@
-use std::io::Result;
+use std::io::{BufRead, Result};
 use std::sync::Arc;
 
 use axum::extract::{Path, State};
 use axum::response::Html;
 use axum::routing::get;
 use axum::Json;
+use syntect::easy::HighlightFile;
+use syntect::html::{
+    append_highlighted_html_for_styled_line, start_highlighted_html_snippet, IncludeBackground,
+};
 
 use crate::Key;
 use crate::TreemapData;
@@ -78,8 +82,28 @@ async fn page_handler(path: Option<Path<String>>) -> Html<String> {
         let syntax_set = syntect::parsing::SyntaxSet::load_defaults_newlines();
         let themes = syntect::highlighting::ThemeSet::load_defaults().themes;
         let theme = themes.get("base16-ocean.dark").unwrap();
-        let high = syntect::html::highlighted_html_for_file(full_path, &syntax_set, theme).unwrap();
-        return Html(high);
+
+        let mut highlighter = HighlightFile::new(full_path, &syntax_set, theme).unwrap();
+        let (mut output, bg) = start_highlighted_html_snippet(theme);
+
+        let mut line = String::new();
+        while highlighter.reader.read_line(&mut line).unwrap() > 0 {
+            {
+                let regions = highlighter
+                    .highlight_lines
+                    .highlight_line(&line, &syntax_set)
+                    .unwrap();
+                append_highlighted_html_for_styled_line(
+                    &regions[..],
+                    IncludeBackground::IfDifferent(bg),
+                    &mut output,
+                )
+                .unwrap();
+            }
+            line.clear();
+        }
+        output.push_str("</pre>\n");
+        return Html(output);
     }
 
     let source = include_str!("../static/index.hbs");
