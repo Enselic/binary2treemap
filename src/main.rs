@@ -29,7 +29,7 @@ fn main() -> Result<()> {
     let args = <Args as clap::Parser>::parse();
 
     println!("Processing {:?}, please wait", &args.path);
-    let treemap_data: TreemapData = process_binary(&args.path)?;
+    let treemap_data = process_binary(&args.path)?;
 
     // Serve the UI (localhost web page).
     Ok(ui::serve(treemap_data)?)
