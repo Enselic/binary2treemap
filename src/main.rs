@@ -1,5 +1,4 @@
 use std::{
-    borrow::Borrow,
     collections::HashMap,
     hash::Hash,
     path::{Path, PathBuf},
@@ -30,20 +29,20 @@ fn main() -> Result<()> {
     let args = <Args as clap::Parser>::parse();
 
     println!("Processing {:?}, please wait", &args.path);
-    let treemap_data: TreemapData<String> = process_binary(&args.path)?;
+    let treemap_data: TreemapData = process_binary(&args.path)?;
 
     // Serve the UI (localhost web page).
     Ok(ui::serve(treemap_data)?)
 }
 
-fn process_binary<T: Borrow<str>>(path: &Path) -> Result<TreemapData<T>> {
+fn process_binary(path: &Path) -> Result<TreemapData> {
     let file_data = std::fs::read(path)?;
     let object = object::File::parse(file_data.as_slice())?;
     let context = addr2line::Context::new(&object)?;
     let size = file_data.len();
 
     let mut treemap_data = TreemapData {
-        name: path.to_string_lossy().to_string(),
+        name: Key::Str(path.to_string_lossy().to_string()),
         size: 0,
         children: HashMap::new(),
     };
@@ -62,7 +61,7 @@ fn process_binary<T: Borrow<str>>(path: &Path) -> Result<TreemapData<T>> {
                         continue;
                     }
 
-                    current = current.increment_child(component);
+                    current = current.increment_child(Key::Str(component.to_owned()));
                 }
             }
 
@@ -75,17 +74,26 @@ fn process_binary<T: Borrow<str>>(path: &Path) -> Result<TreemapData<T>> {
     Ok(treemap_data)
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum Key<T: Borrow<str>> {
-    Str(T),
+#[derive(Debug, Clone, Eq, PartialEq, Hash, serde_derive::Serialize)]
+pub enum Key {
+    Str(String),
     Line(u32),
 }
 
-type Children<T: Borrow<str>> = HashMap<T, TreemapData<T>>;
+impl ToString for Key {
+    fn to_string(&self) -> String {
+        match self {
+            Key::Str(s) => s.clone(),
+            Key::Line(l) => l.to_string(),
+        }
+    }
+}
+
+type Children = HashMap<Key, TreemapData>;
 
 #[derive(Debug, Clone, serde_derive::Serialize)]
-pub struct TreemapData<T: Borrow<str>> {
-    pub name: String,
+pub struct TreemapData {
+    pub name: Key,
 
     /// The size in bytes of this node. This is the sum of the sizes of all its
     /// children. We call the field `sum` for easy interopability with d3js.
@@ -93,11 +101,11 @@ pub struct TreemapData<T: Borrow<str>> {
 
     /// How the `size` is distributed among the children.
     #[serde(serialize_with = "hash_map_values_to_vec")]
-    pub children: Children<T>,
+    pub children: Children,
 }
 
-fn hash_map_values_to_vec<S, T: Borrow<str>>(
-    value: &Children<T>,
+fn hash_map_values_to_vec<S>(
+    value: &Children,
     serializer: S,
 ) -> std::result::Result<S::Ok, S::Error>
 where
@@ -106,13 +114,16 @@ where
     serde::Serialize::serialize(&value.values().collect::<Vec<_>>(), serializer)
 }
 
-impl<T: Borrow<str> + Eq + PartialEq + Hash + ToString> TreemapData<T> {
-    fn increment_child(&mut self, key: T) -> &mut TreemapData<T> {
-        let child = self.children.entry(key).or_insert_with(|| TreemapData {
-            name: key.to_string(),
-            size: 0,
-            children: HashMap::new(),
-        });
+impl TreemapData {
+    fn increment_child(&mut self, key: Key) -> &mut TreemapData {
+        let child = self
+            .children
+            .entry(key.clone())
+            .or_insert_with(|| TreemapData {
+                name: key,
+                size: 0,
+                children: HashMap::new(),
+            });
         child.size += 1;
         child
     }

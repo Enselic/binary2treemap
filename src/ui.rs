@@ -1,4 +1,3 @@
-use std::borrow::Borrow;
 use std::io::Result;
 use std::sync::Arc;
 
@@ -10,7 +9,7 @@ use axum::Json;
 use crate::Key;
 use crate::TreemapData;
 
-pub fn serve<T: Borrow<str>>(treemap_data: TreemapData<T>) -> Result<()> {
+pub fn serve(treemap_data: TreemapData) -> Result<()> {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_io()
         .build()
@@ -19,8 +18,8 @@ pub fn serve<T: Borrow<str>>(treemap_data: TreemapData<T>) -> Result<()> {
     rt.block_on(serve_impl(treemap_data))
 }
 
-impl<'d, T: Borrow<str>> TreemapData<T> {
-    fn for_path(&'d self, path: &Option<Path<String>>) -> Option<&'d TreemapData<T>> {
+impl<'d> TreemapData {
+    fn for_path(&'d self, path: &Option<Path<String>>) -> Option<&'d TreemapData> {
         let path = match path {
             Some(path) => path.as_str(),
             None => return Some(self),
@@ -31,7 +30,7 @@ impl<'d, T: Borrow<str>> TreemapData<T> {
             if component.is_empty() {
                 continue;
             }
-            current = match current.children.get(Key::Str(component)) {
+            current = match current.children.get(&Key::Str(component.to_string())) {
                 Some(child) => child,
                 None => return None,
             };
@@ -41,11 +40,11 @@ impl<'d, T: Borrow<str>> TreemapData<T> {
 }
 
 #[derive(Debug, Clone)]
-struct UiState<T: Borrow<str>> {
-    treemap_data: Arc<TreemapData<T>>,
+struct UiState {
+    treemap_data: Arc<TreemapData>,
 }
 
-async fn serve_impl<T: Borrow<str>>(treemap_data: TreemapData<T>) -> Result<()> {
+async fn serve_impl(treemap_data: TreemapData) -> Result<()> {
     let app = axum::Router::new()
         .route("/__debug__", get(debug_treemap_data))
         .route("/__data__/", get(data_handler))
@@ -90,13 +89,13 @@ async fn page_handler(path: Option<Path<String>>) -> Html<String> {
     // }
 }
 
-async fn data_handler<T: Borrow<str>>(
-    State(state): State<UiState<T>>,
+async fn data_handler(
+    State(state): State<UiState>,
     path: Option<Path<String>>,
-) -> Json<TreemapData<T>> {
+) -> Json<TreemapData> {
     Json(state.treemap_data.for_path(&path).unwrap().clone())
 }
 
-async fn debug_treemap_data<T: Borrow<str>>(State(state): State<UiState<T>>) -> Html<String> {
+async fn debug_treemap_data(State(state): State<UiState>) -> Html<String> {
     Html(format!("<pre>{state:#?}</pre>"))
 }
