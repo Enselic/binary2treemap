@@ -87,8 +87,13 @@ async fn page_handler(path: Option<Path<String>>) -> Html<String> {
         let (mut output, bg) = start_highlighted_html_snippet(theme);
 
         let mut line = String::new();
+        let mut line_nbr = 0;
         while highlighter.reader.read_line(&mut line).unwrap() > 0 {
             {
+                line_nbr += 1;
+
+                output.push_str(line_nbr.to_string().as_str());
+                output.push_str("  ");
                 let regions = highlighter
                     .highlight_lines
                     .highlight_line(&line, &syntax_set)
