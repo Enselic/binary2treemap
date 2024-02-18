@@ -1,9 +1,9 @@
 use std::{
+    borrow::Borrow,
     collections::HashMap,
+    hash::Hash,
     path::{Path, PathBuf},
 };
-
-//mod exporters;
 
 mod ui;
 
@@ -30,13 +30,13 @@ fn main() -> Result<()> {
     let args = <Args as clap::Parser>::parse();
 
     println!("Processing {:?}, please wait", &args.path);
-    let treemap_data = process_binary(&args.path)?;
+    let treemap_data: TreemapData<String> = process_binary(&args.path)?;
 
     // Serve the UI (localhost web page).
     Ok(ui::serve(treemap_data)?)
 }
 
-fn process_binary(path: &Path) -> Result<TreemapData> {
+fn process_binary<T: Borrow<str>>(path: &Path) -> Result<TreemapData<T>> {
     let file_data = std::fs::read(path)?;
     let object = object::File::parse(file_data.as_slice())?;
     let context = addr2line::Context::new(&object)?;
@@ -66,9 +66,8 @@ fn process_binary(path: &Path) -> Result<TreemapData> {
                 }
             }
 
-            // TODO: Do not treat line numbers as part of the file path.
             if let Some(line) = loc.line {
-                current.increment_child(line);
+                current.increment_child(Key::Line(line));
             }
         }
     }
@@ -76,8 +75,16 @@ fn process_binary(path: &Path) -> Result<TreemapData> {
     Ok(treemap_data)
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum Key<T: Borrow<str>> {
+    Str(T),
+    Line(u32),
+}
+
+type Children<T: Borrow<str>> = HashMap<T, TreemapData<T>>;
+
 #[derive(Debug, Clone, serde_derive::Serialize)]
-pub struct TreemapData {
+pub struct TreemapData<T: Borrow<str>> {
     pub name: String,
 
     /// The size in bytes of this node. This is the sum of the sizes of all its
@@ -86,11 +93,11 @@ pub struct TreemapData {
 
     /// How the `size` is distributed among the children.
     #[serde(serialize_with = "hash_map_values_to_vec")]
-    pub children: HashMap<String, TreemapData>,
+    pub children: Children<T>,
 }
 
-fn hash_map_values_to_vec<S>(
-    value: &HashMap<String, TreemapData>,
+fn hash_map_values_to_vec<S, T: Borrow<str>>(
+    value: &Children<T>,
     serializer: S,
 ) -> std::result::Result<S::Ok, S::Error>
 where
@@ -99,16 +106,13 @@ where
     serde::Serialize::serialize(&value.values().collect::<Vec<_>>(), serializer)
 }
 
-impl TreemapData {
-    fn increment_child(&mut self, key: impl ToString) -> &mut TreemapData {
-        let child = self
-            .children
-            .entry(key.to_string())
-            .or_insert_with(|| TreemapData {
-                name: key.to_string(),
-                size: 0,
-                children: HashMap::new(),
-            });
+impl<T: Borrow<str> + Eq + PartialEq + Hash + ToString> TreemapData<T> {
+    fn increment_child(&mut self, key: T) -> &mut TreemapData<T> {
+        let child = self.children.entry(key).or_insert_with(|| TreemapData {
+            name: key.to_string(),
+            size: 0,
+            children: HashMap::new(),
+        });
         child.size += 1;
         child
     }
