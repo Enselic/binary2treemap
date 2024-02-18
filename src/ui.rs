@@ -70,6 +70,13 @@ async fn page_handler(path: Option<Path<String>>) -> Html<String> {
     // TODO: Cache.
     let mut handlebars = Handlebars::new();
 
+    if matches!(
+        path.as_ref().map(|p| p.0.as_str()),
+        Some("/home/martin/src/binary2treemap/src/ui.rs")
+    ) {
+        return Html("yeeeeep".to_string());
+    }
+
     let source = include_str!("../static/index.hbs");
     assert!(handlebars.register_template_string("index", source).is_ok());
     Html(
