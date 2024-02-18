@@ -40,7 +40,6 @@ fn main() -> Result<()> {
     println!("Processing {:?}, please wait", &args.path);
     let treemap_data = process_binary(&args.path)?;
 
-
     if args.dump_json {
         println!("{}", serde_json::to_string_pretty(&treemap_data)?);
     }
@@ -53,14 +52,14 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn process_binary(path: &Path) -> Result<TreemapData> {
+fn process_binary(path: &Path) -> Result<TreemapNode> {
     let file_data = std::fs::read(path)?;
     let object = object::File::parse(file_data.as_slice())?;
     let context = addr2line::Context::new(&object)?;
     let size = file_data.len();
 
-    let mut treemap_data = TreemapData {
-        name: Key::Str(path.to_string_lossy().to_string()),
+    let mut treemap_data = TreemapNode::Directory {
+        name: path.to_string_lossy().to_string(),
         size: 0,
         children: HashMap::new(),
     };
@@ -73,18 +72,43 @@ fn process_binary(path: &Path) -> Result<TreemapData> {
             treemap_data.size += 1;
 
             let mut current = &mut treemap_data;
-            if let Some(file) = loc.file {
-                for component in file.split('/') {
-                    if component.is_empty() {
-                        continue;
-                    }
+            if let Some(path) = loc.file {
+                // TODO: Reuse old Vec
+                let mut directories: Vec<_> = path.split('/').filter(|d| !d.is_empty()).collect();
+                let file = directories.pop().unwrap();
+                for directory in directories {
+                    match directory {
+                        TreemapNode::Directory {
+                            name,
+                            size,
+                            children,
+                        } => {
+                            let child = children.entry(directory).or_insert_with(|| {
+                                TreemapNode::Directory {
+                                    name: directory.to_string(),
+                                    size: 0,
+                                    children: HashMap::new(),
+                                }
+                            });
 
-                    current = current.increment_child(Key::Str(component.to_owned()));
+                            child.size += 1;
+                            current = child;
+                        }
+                        _ => unreachable!(),
+                    }
                 }
             }
 
             if let Some(line) = loc.line {
-                current.increment_child(Key::Line(line));
+                let child = self
+                    .children
+                    .entry(key.clone())
+                    .or_insert_with(|| TreemapNode {
+                        name: key,
+                        size: 0,
+                        children: HashMap::new(),
+                    });
+                child.size += 1;
             }
         }
     }
@@ -110,39 +134,43 @@ impl ToString for Key {
 type Children = HashMap<Key, TreemapData>;
 
 #[derive(Debug, Clone, serde_derive::Serialize)]
-pub struct TreemapData {
-    pub name: Key,
-
-    /// The size in bytes of this node. This is the sum of the sizes of all its
-    /// children. We call the field `sum` for easy interopability with d3js.
-    pub size: u64,
-
-    /// How the `size` is distributed among the children.
-    #[serde(serialize_with = "hash_map_values_to_vec")]
-    pub children: Children,
+enum TreemapNode {
+    Directory {
+        name: String,
+        size: u64,
+        children: Children,
+    },
+    File {
+        name: String,
+        size: u64,
+        line_to_bytes: HashMap<u32, u64>,
+    },
 }
 
-fn hash_map_values_to_vec<S>(
-    value: &Children,
-    serializer: S,
-) -> std::result::Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    serde::Serialize::serialize(&value.values().collect::<Vec<_>>(), serializer)
-}
-
-impl TreemapData {
-    fn increment_child(&mut self, key: Key) -> &mut TreemapData {
-        let child = self
-            .children
-            .entry(key.clone())
-            .or_insert_with(|| TreemapData {
-                name: key,
-                size: 0,
-                children: HashMap::new(),
-            });
-        child.size += 1;
-        child
-    }
-}
+// pub enum TreemapData {
+//     Directory {
+//         children: Children,
+//     },
+//     File {
+//         name: String,
+//     }
+//     pub name: Key,
+//
+//     /// The size in bytes of this node. This is the sum of the sizes of all its
+//     /// children. We call the field `sum` for easy interopability with d3js.
+//     pub size: u64,
+//
+//     /// How the `size` is distributed among the children.
+//     #[serde(serialize_with = "hash_map_values_to_vec")]
+//     pub children: Children,
+// }
+//
+// fn hash_map_values_to_vec<S>(
+//     value: &Children,
+//     serializer: S,
+// ) -> std::result::Result<S::Ok, S::Error>
+// where
+//     S: serde::Serializer,
+// {
+//     serde::Serialize::serialize(&value.values().collect::<Vec<_>>(), serializer)
+// }
