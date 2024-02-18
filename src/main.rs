@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     hash::Hash,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, vec,
 };
 
 mod ui;
@@ -23,6 +23,15 @@ pub struct Args {
     /// Maximum depth of the treemap.
     #[arg(long)]
     max_depth: Option<u64>,
+
+    #[arg(long)]
+    dump_json: bool,
+
+    #[arg(long)]
+    dump_paths: bool,
+
+    #[arg(long)]
+    no_serve: bool,
 }
 
 fn main() -> Result<()> {
@@ -31,8 +40,17 @@ fn main() -> Result<()> {
     println!("Processing {:?}, please wait", &args.path);
     let treemap_data = process_binary(&args.path)?;
 
-    // Serve the UI (localhost web page).
-    Ok(ui::serve(treemap_data)?)
+
+    if args.dump_json {
+        println!("{}", serde_json::to_string_pretty(&treemap_data)?);
+    }
+
+    if !args.no_serve {
+        // Serve the UI (localhost web page).
+        ui::serve(treemap_data)?;
+    }
+
+    Ok(())
 }
 
 fn process_binary(path: &Path) -> Result<TreemapData> {
