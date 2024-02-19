@@ -11,9 +11,9 @@ use syntect::html::{
 };
 
 use crate::Key;
-use crate::TreemapData;
+use crate::TreemapNode;
 
-pub fn serve(treemap_data: TreemapData) -> Result<()> {
+pub fn serve(treemap_data: TreemapNode) -> Result<()> {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_io()
         .build()
@@ -22,8 +22,8 @@ pub fn serve(treemap_data: TreemapData) -> Result<()> {
     rt.block_on(serve_impl(treemap_data))
 }
 
-impl<'d> TreemapData {
-    fn for_path(&'d self, path: &Option<Path<String>>) -> Option<&'d TreemapData> {
+impl<'d> TreemapNode {
+    fn for_path(&'d self, path: &Option<Path<String>>) -> Option<&'d TreemapNode> {
         let path = match path {
             Some(path) => path.as_str(),
             None => return Some(self),
@@ -45,10 +45,10 @@ impl<'d> TreemapData {
 
 #[derive(Debug, Clone)]
 struct UiState {
-    treemap_data: Arc<TreemapData>,
+    treemap_data: Arc<TreemapNode>,
 }
 
-async fn serve_impl(treemap_data: TreemapData) -> Result<()> {
+async fn serve_impl(treemap_data: TreemapNode) -> Result<()> {
     let app = axum::Router::new()
         .route("/__debug__", get(debug_treemap_data))
         .route("/__data__/", get(data_handler))
@@ -136,7 +136,7 @@ async fn page_handler(path: Option<Path<String>>) -> Html<String> {
 async fn data_handler(
     State(state): State<UiState>,
     path: Option<Path<String>>,
-) -> Json<TreemapData> {
+) -> Json<TreemapNode> {
     Json(state.treemap_data.for_path(&path).unwrap().clone())
 }
 

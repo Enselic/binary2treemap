@@ -73,7 +73,6 @@ fn process_binary(path: &Path) -> Result<TreemapNode> {
 
             let mut current = &mut treemap_data;
             if let Some(path) = loc.file {
-                // TODO: Reuse old Vec
                 let mut components = path.split('/').peekable();
                 while let Some(component) = components.next() {
                     let is_file = components.peek().is_none();
