@@ -79,9 +79,18 @@ async fn page_handler(State(state): State<UiState>, path: Option<Path<String>>) 
     // TODO: Cache.
     let mut handlebars = Handlebars::new();
 
-    let path = path.map(|p| p.0).unwrap_or_default();
+    let original_path = path.map(|p| p.0).unwrap_or_default();
 
-    if std::path::Path::exists(&PathBuf::from(format!("/{}", path))) {
+    // TODO: Add arg
+    let path = original_path.replace(
+        "/rustc/fb5ed726f72c6d16c788517c60ec00d4564b9348",
+        "/home/martin/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust",
+    );
+
+    println!("Handling: {}", path);
+
+    if std::fs::File::open(&PathBuf::from(format!("/{}", path))).is_ok() {
+        println!("Loading file: {}", path);
         let full_path = format!("/{}", path);
         let syntax_set = syntect::parsing::SyntaxSet::load_defaults_newlines();
         let themes = syntect::highlighting::ThemeSet::load_defaults().themes;
@@ -94,7 +103,7 @@ async fn page_handler(State(state): State<UiState>, path: Option<Path<String>>) 
 
         let file_data = state
             .treemap_data
-            .for_path(&Some(path.clone()))
+            .for_path(&Some(original_path.clone()))
             .unwrap()
             .clone();
 
