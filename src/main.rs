@@ -145,23 +145,6 @@ impl TreemapNode {
     }
 }
 
-// pub enum TreemapData {
-//     Directory {
-//         children: Children,
-//     },
-//     File {
-//         name: String,
-//     }
-//     pub name: Key,
-//
-//     /// The size in bytes of this node. This is the sum of the sizes of all its
-//     /// children. We call the field `sum` for easy interopability with d3js.
-//     pub size: u64,
-//
-//     /// How the `size` is distributed among the children.
-//     pub children: Children,
-// }
-//
 fn hash_map_values_to_vec<S>(
     value: &Children,
     serializer: S,
