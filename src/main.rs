@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    hash::Hash,
     path::{Path, PathBuf},
 };
 
@@ -69,7 +68,7 @@ fn process_binary(path: &Path) -> Result<TreemapNode> {
             // The root is a special case so manually increment the size here.
             // Note that we only care about bytes that have an associated debug
             // info location so we can map it.
-            treemap_data.size += 1;
+            treemap_data.increment_size();
 
             let mut current = &mut treemap_data;
             if let Some(path) = loc.file {
@@ -83,23 +82,24 @@ fn process_binary(path: &Path) -> Result<TreemapNode> {
                             size,
                             children,
                         } => {
-                            let child = children.entry(&component).or_insert_with(|| {
-                                if is_file {
-                                    TreemapNode::File {
-                                        name: component.to_string(),
-                                        size: 0,
-                                        line_to_bytes: HashMap::new(),
+                            let child =
+                                children.entry(component.to_string()).or_insert_with(|| {
+                                    if is_file {
+                                        TreemapNode::File {
+                                            name: component.to_string(),
+                                            size: 0,
+                                            line_to_bytes: HashMap::new(),
+                                        }
+                                    } else {
+                                        TreemapNode::Directory {
+                                            name: component.to_string(),
+                                            size: 0,
+                                            children: HashMap::new(),
+                                        }
                                     }
-                                } else {
-                                    TreemapNode::Directory {
-                                        name: component.to_string(),
-                                        size: 0,
-                                        children: HashMap::new(),
-                                    }
-                                }
-                            });
+                                });
 
-                            child.size += 1;
+                            child.increment_size();
                             current = child;
                         }
                         _ => unreachable!(),
@@ -115,7 +115,7 @@ fn process_binary(path: &Path) -> Result<TreemapNode> {
                         line_to_bytes,
                     } => {
                         let bytes = line_to_bytes.entry(line).or_default();
-                        bytes += 1;
+                        *bytes += 1;
                     }
                     _ => unreachable!(),
                 }
@@ -124,21 +124,6 @@ fn process_binary(path: &Path) -> Result<TreemapNode> {
     }
 
     Ok(treemap_data)
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Hash, serde_derive::Serialize)]
-pub enum Key {
-    Str(String),
-    Line(u32),
-}
-
-impl ToString for Key {
-    fn to_string(&self) -> String {
-        match self {
-            Key::Str(s) => s.clone(),
-            Key::Line(l) => l.to_string(),
-        }
-    }
 }
 
 type Children = HashMap<String, TreemapNode>;
@@ -155,6 +140,14 @@ enum TreemapNode {
         size: u64,
         line_to_bytes: HashMap<u32, u64>,
     },
+}
+impl TreemapNode {
+    fn increment_size(&mut self) {
+        match self {
+            TreemapNode::Directory { size, .. } => *size += 1,
+            TreemapNode::File { size, .. } => *size += 1,
+        }
+    }
 }
 
 // pub enum TreemapData {

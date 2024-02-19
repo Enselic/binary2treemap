@@ -10,7 +10,6 @@ use syntect::html::{
     append_highlighted_html_for_styled_line, start_highlighted_html_snippet, IncludeBackground,
 };
 
-use crate::Key;
 use crate::TreemapNode;
 
 pub fn serve(treemap_data: TreemapNode) -> Result<()> {
@@ -34,10 +33,15 @@ impl<'d> TreemapNode {
             if component.is_empty() {
                 continue;
             }
-            current = match current.children.get(&Key::Str(component.to_string())) {
-                Some(child) => child,
-                None => return None,
-            };
+            match current {
+                TreemapNode::Directory { children, .. } => {
+                    current = match children.get(component) {
+                        Some(child) => child,
+                        None => return None,
+                    };
+                }
+                _ => break,
+            }
         }
         Some(current)
     }
