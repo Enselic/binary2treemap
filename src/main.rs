@@ -121,10 +121,12 @@ fn process_binary(path: &Path) -> Result<TreemapNode> {
 type Children = HashMap<String, TreemapNode>;
 
 #[derive(Debug, Clone, serde_derive::Serialize)]
+#[serde(untagged)]
 enum TreemapNode {
     Directory {
         name: String,
         size: u64,
+        #[serde(serialize_with = "hash_map_values_to_vec")]
         children: Children,
     },
     File {
@@ -133,6 +135,7 @@ enum TreemapNode {
         line_to_bytes: HashMap<u32, u64>,
     },
 }
+
 impl TreemapNode {
     fn increment_size(&mut self) {
         match self {
@@ -156,16 +159,15 @@ impl TreemapNode {
 //     pub size: u64,
 //
 //     /// How the `size` is distributed among the children.
-//     #[serde(serialize_with = "hash_map_values_to_vec")]
 //     pub children: Children,
 // }
 //
-// fn hash_map_values_to_vec<S>(
-//     value: &Children,
-//     serializer: S,
-// ) -> std::result::Result<S::Ok, S::Error>
-// where
-//     S: serde::Serializer,
-// {
-//     serde::Serialize::serialize(&value.values().collect::<Vec<_>>(), serializer)
-// }
+fn hash_map_values_to_vec<S>(
+    value: &Children,
+    serializer: S,
+) -> std::result::Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serde::Serialize::serialize(&value.values().collect::<Vec<_>>(), serializer)
+}
