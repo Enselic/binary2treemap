@@ -1,4 +1,5 @@
 use std::io::{BufRead, Result};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::extract::{Path, State};
@@ -22,7 +23,7 @@ pub fn serve(treemap_data: TreemapNode) -> Result<()> {
 }
 
 impl<'d> TreemapNode {
-    fn for_path(&'d self, path: &Option<Path<String>>) -> Option<&'d TreemapNode> {
+    fn for_path(&'d self, path: &Option<String>) -> Option<&'d TreemapNode> {
         let path = match path {
             Some(path) => path.as_str(),
             None => return Some(self),
@@ -73,17 +74,15 @@ struct HbsData {
     path: String,
 }
 
-async fn page_handler(path: Option<Path<String>>) -> Html<String> {
+async fn page_handler(State(state): State<UiState>, path: Option<Path<String>>) -> Html<String> {
     use handlebars::Handlebars;
     // TODO: Cache.
     let mut handlebars = Handlebars::new();
-    
 
-    if matches!(
-        path.as_ref().map(|p| p.0.as_str()),
-        Some("home/martin/src/binary2treemap/src/ui.rs")
-    ) {
-        let full_path = format!("/{}", path.unwrap().0);
+    let path = path.map(|p| p.0).unwrap_or_default();
+
+    if std::path::Path::exists(&PathBuf::from(format!("/{}", path))) {
+        let full_path = format!("/{}", path);
         let syntax_set = syntect::parsing::SyntaxSet::load_defaults_newlines();
         let themes = syntect::highlighting::ThemeSet::load_defaults().themes;
         let theme = themes.get("base16-ocean.dark").unwrap();
@@ -93,14 +92,32 @@ async fn page_handler(path: Option<Path<String>>) -> Html<String> {
 
         let mut line = String::new();
 
-        line.push_str("<pre>Bytes contributed to binary by line:<pre>\n\n\n");
+        let file_data = state
+            .treemap_data
+            .for_path(&Some(path.clone()))
+            .unwrap()
+            .clone();
+
+        let line_to_bytes = match file_data {
+            TreemapNode::File { line_to_bytes, .. } => line_to_bytes.clone(),
+            _ => unreachable!(),
+        };
+
+        // line.push_str("<pre>Bytes contributed to binary by line:<pre>\n\n\n");
 
         let mut line_nbr = 0;
         while highlighter.reader.read_line(&mut line).unwrap() > 0 {
             {
                 line_nbr += 1;
 
-                output.push_str(line_nbr.to_string().as_str());
+                output.push_str(
+                    line_to_bytes
+                        .get(&line_nbr)
+                        .map(|v| *v)
+                        .unwrap_or_default()
+                        .to_string()
+                        .as_str(),
+                );
                 output.push_str("       ");
                 let regions = highlighter
                     .highlight_lines
@@ -121,16 +138,7 @@ async fn page_handler(path: Option<Path<String>>) -> Html<String> {
 
     let source = include_str!("../static/index.hbs");
     assert!(handlebars.register_template_string("index", source).is_ok());
-    Html(
-        handlebars
-            .render(
-                "index",
-                &HbsData {
-                    path: path.map(|p| p.0).unwrap_or_default(),
-                },
-            )
-            .unwrap(),
-    )
+    Html(handlebars.render("index", &HbsData { path }).unwrap())
     // } else {
     //     Html(format!(
     //         "ERROR: Could not find {path:?}. Maybe you want to visit <a href=\"/__debug__\""
@@ -142,7 +150,13 @@ async fn data_handler(
     State(state): State<UiState>,
     path: Option<Path<String>>,
 ) -> Json<TreemapNode> {
-    Json(state.treemap_data.for_path(&path).unwrap().clone())
+    Json(
+        state
+            .treemap_data
+            .for_path(&path.map(|x| x.0))
+            .unwrap()
+            .clone(),
+    )
 }
 
 async fn debug_treemap_data(State(state): State<UiState>) -> Html<String> {
