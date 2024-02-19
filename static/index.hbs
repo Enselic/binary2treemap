@@ -28,7 +28,13 @@
 
         // Compute the layout.
         const hierarchy = d3.hierarchy(data)
-            .sum((d) => d.children.length === 0 ? d.size : 0)
+            .sum((d) => {
+                if (Object.hasOwn(d, "children")) {
+                    return d.children.length === 0 ? d.size : 0;
+                } else {
+                    return d.size;
+                }
+            })
             .sort((a, b) => b.value - a.value);
         const root = d3.treemap().tile(tile)(hierarchy);
 

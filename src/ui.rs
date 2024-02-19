@@ -77,6 +77,7 @@ async fn page_handler(path: Option<Path<String>>) -> Html<String> {
     use handlebars::Handlebars;
     // TODO: Cache.
     let mut handlebars = Handlebars::new();
+    
 
     if matches!(
         path.as_ref().map(|p| p.0.as_str()),
