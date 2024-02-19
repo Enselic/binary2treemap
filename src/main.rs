@@ -74,20 +74,29 @@ fn process_binary(path: &Path) -> Result<TreemapNode> {
             let mut current = &mut treemap_data;
             if let Some(path) = loc.file {
                 // TODO: Reuse old Vec
-                let mut directories: Vec<_> = path.split('/').filter(|d| !d.is_empty()).collect();
-                let file = directories.pop().unwrap();
-                for directory in directories {
-                    match directory {
+                let mut components = path.split('/').peekable();
+                while let Some(component) = components.next() {
+                    let is_file = components.peek().is_none();
+
+                    match current {
                         TreemapNode::Directory {
                             name,
                             size,
                             children,
                         } => {
-                            let child = children.entry(directory).or_insert_with(|| {
-                                TreemapNode::Directory {
-                                    name: directory.to_string(),
-                                    size: 0,
-                                    children: HashMap::new(),
+                            let child = children.entry(&component).or_insert_with(|| {
+                                if is_file {
+                                    TreemapNode::File {
+                                        name: component.to_string(),
+                                        size: 0,
+                                        line_to_bytes: HashMap::new(),
+                                    }
+                                } else {
+                                    TreemapNode::Directory {
+                                        name: component.to_string(),
+                                        size: 0,
+                                        children: HashMap::new(),
+                                    }
                                 }
                             });
 
@@ -100,15 +109,17 @@ fn process_binary(path: &Path) -> Result<TreemapNode> {
             }
 
             if let Some(line) = loc.line {
-                let child = self
-                    .children
-                    .entry(key.clone())
-                    .or_insert_with(|| TreemapNode {
-                        name: key,
-                        size: 0,
-                        children: HashMap::new(),
-                    });
-                child.size += 1;
+                match current {
+                    TreemapNode::File {
+                        name,
+                        size,
+                        line_to_bytes,
+                    } => {
+                        let bytes = line_to_bytes.entry(line).or_default();
+                        bytes += 1;
+                    }
+                    _ => unreachable!(),
+                }
             }
         }
     }
@@ -131,7 +142,7 @@ impl ToString for Key {
     }
 }
 
-type Children = HashMap<Key, TreemapData>;
+type Children = HashMap<String, TreemapNode>;
 
 #[derive(Debug, Clone, serde_derive::Serialize)]
 enum TreemapNode {
