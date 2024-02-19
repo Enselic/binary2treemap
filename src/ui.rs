@@ -89,7 +89,7 @@ async fn page_handler(State(state): State<UiState>, path: Option<Path<String>>) 
 
     println!("Handling: {}", path);
 
-    if std::fs::File::open(&PathBuf::from(format!("/{}", path))).is_ok() {
+    if path.len() > 2 && std::fs::File::open(&PathBuf::from(format!("/{}", path))).is_ok() {
         println!("Loading file: {}", path);
         let full_path = format!("/{}", path);
         let syntax_set = syntect::parsing::SyntaxSet::load_defaults_newlines();
