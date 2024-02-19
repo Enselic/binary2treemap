@@ -77,11 +77,7 @@ fn process_binary(path: &Path) -> Result<TreemapNode> {
                     let is_file = components.peek().is_none();
 
                     match current {
-                        TreemapNode::Directory {
-                            name,
-                            size,
-                            children,
-                        } => {
+                        TreemapNode::Directory { children, .. } => {
                             let child =
                                 children.entry(component.to_string()).or_insert_with(|| {
                                     if is_file {
@@ -109,11 +105,7 @@ fn process_binary(path: &Path) -> Result<TreemapNode> {
 
             if let Some(line) = loc.line {
                 match current {
-                    TreemapNode::File {
-                        name,
-                        size,
-                        line_to_bytes,
-                    } => {
+                    TreemapNode::File { line_to_bytes, .. } => {
                         let bytes = line_to_bytes.entry(line).or_default();
                         *bytes += 1;
                     }
