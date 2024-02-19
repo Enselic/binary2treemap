@@ -89,7 +89,8 @@ async fn page_handler(State(state): State<UiState>, path: Option<Path<String>>) 
 
     println!("Handling: {}", path);
 
-    if path.len() > 2 && std::fs::File::open(&PathBuf::from(format!("/{}", path))).is_ok() {
+    // TODO: Ensure to not open wrong file
+    if path.len() > 2 && std::fs::File::open(&PathBuf::from(format!("/{}", path))).is_ok() && std::fs::metadata(path) {
         println!("Loading file: {}", path);
         let full_path = format!("/{}", path);
         let syntax_set = syntect::parsing::SyntaxSet::load_defaults_newlines();

@@ -6,7 +6,8 @@ where
 }
 
 fn main() {
-    let x = add(1u8, 2u8);
-    let y = add(100u128, 200u128);
+    let i = u32::from_str_radix(&std::env::args().next().unwrap(), 10).unwrap();
+    let x = add(i, 100u32);
+    let y = add(i as u128, 100u128);
     println!("x = {x}, y = {y}");
 }
