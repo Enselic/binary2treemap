@@ -58,8 +58,8 @@ async fn serve_impl(treemap_data: TreemapNode) -> Result<()> {
         .route("/__debug__", get(debug_treemap_data))
         .route("/__data__/", get(data_handler))
         .route("/__data__/*key", get(data_handler))
-        .route("/", get(page_handler))
-        .route("/*key", get(page_handler))
+        .route("/", get(treemap_or_file_handler))
+        .route("/*key", get(treemap_or_file_handler))
         .with_state(UiState {
             treemap_data: Arc::new(treemap_data),
         });
@@ -74,25 +74,31 @@ struct HbsData {
     path: String,
 }
 
-async fn page_handler(State(state): State<UiState>, path: Option<Path<String>>) -> Html<String> {
+async fn treemap_or_file_handler(
+    State(state): State<UiState>,
+    path: Option<Path<String>>,
+) -> Html<String> {
     use handlebars::Handlebars;
     // TODO: Cache.
     let mut handlebars = Handlebars::new();
 
-    let original_path = path.map(|p| p.0).unwrap_or_default();
+    let original_abs_path = path.map(|p| p.0).unwrap_or_default();
 
     // TODO: Add arg
-    let path = original_path.replace(
+    let abs_path = original_abs_path.replace(
         "/rustc/fb5ed726f72c6d16c788517c60ec00d4564b9348",
         "/home/martin/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust",
     );
 
-    println!("Handling: {}", path);
+    println!("Handling: {}", abs_path);
 
     // TODO: Ensure to not open wrong file
-    if path.len() > 2 && std::fs::File::open(&PathBuf::from(format!("/{}", path))).is_ok() && std::fs::metadata(path) {
-        println!("Loading file: {}", path);
-        let full_path = format!("/{}", path);
+    if abs_path.len() > 2
+        && std::fs::File::open(&PathBuf::from(format!("/{}", abs_path))).is_ok()
+        && std::fs::metadata(abs_path)
+    {
+        println!("Loading file: {}", abs_path);
+        let full_path = format!("/{}", abs_path);
         let syntax_set = syntect::parsing::SyntaxSet::load_defaults_newlines();
         let themes = syntect::highlighting::ThemeSet::load_defaults().themes;
         let theme = themes.get("base16-ocean.dark").unwrap();
@@ -104,7 +110,7 @@ async fn page_handler(State(state): State<UiState>, path: Option<Path<String>>) 
 
         let file_data = state
             .treemap_data
-            .for_path(&Some(original_path.clone()))
+            .for_path(&Some(original_abs_path.clone()))
             .unwrap()
             .clone();
 
@@ -148,7 +154,7 @@ async fn page_handler(State(state): State<UiState>, path: Option<Path<String>>) 
 
     let source = include_str!("../static/index.hbs");
     assert!(handlebars.register_template_string("index", source).is_ok());
-    Html(handlebars.render("index", &HbsData { path }).unwrap())
+    Html(handlebars.render("index", &HbsData { path: abs_path }).unwrap())
     // } else {
     //     Html(format!(
     //         "ERROR: Could not find {path:?}. Maybe you want to visit <a href=\"/__debug__\""
