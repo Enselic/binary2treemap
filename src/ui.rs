@@ -90,7 +90,9 @@ async fn treemap_or_file_handler(
         "/home/martin/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust",
     );
 
-    println!("Handling: {}", abs_path);
+    println!("Handling: {} ({})", abs_path, original_abs_path);
+
+    let 
 
     // TODO: Ensure to not open wrong file
     if abs_path.len() > 2
@@ -152,7 +154,7 @@ async fn treemap_or_file_handler(
         return Html(output);
     }
 
-    let source = include_str!("../static/index.hbs");
+    let source = include_str!("../static/treemap.hbs");
     assert!(handlebars.register_template_string("index", source).is_ok());
     Html(handlebars.render("index", &HbsData { path: abs_path }).unwrap())
     // } else {
