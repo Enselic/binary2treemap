@@ -1,6 +1,7 @@
 use std::io::{BufRead, Result};
 use std::path::PathBuf;
 use std::sync::Arc;
+use handlebars::Handlebars;
 
 use axum::extract::{Path, State};
 use axum::response::Html;
@@ -51,6 +52,7 @@ impl<'d> TreemapNode {
 #[derive(Debug, Clone)]
 struct UiState {
     treemap_data: Arc<TreemapNode>,
+    handlebars: Handlebars,
 }
 
 async fn serve_impl(treemap_data: TreemapNode) -> Result<()> {
@@ -78,7 +80,6 @@ async fn treemap_or_file_handler(
     State(state): State<UiState>,
     path: Option<Path<String>>,
 ) -> Html<String> {
-    use handlebars::Handlebars;
     // TODO: Cache.
     let mut handlebars = Handlebars::new();
 
