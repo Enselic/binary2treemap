@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>TODO</title>
+</head>
+
+<body>
+    <h1>TODO</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Line number</th>
+                <th>Size in binary</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in line_data %}
+            <tr>
+                <td>item.line_number</td>
+                <td>item.size_in_binary</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+
+</html>

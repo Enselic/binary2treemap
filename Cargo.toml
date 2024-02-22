@@ -13,6 +13,7 @@ repository = "https://github.com/Enselic/binary2treemap"
 
 [dependencies]
 addr2line = "0.21.0"
+askama = "0.12.1"
 axum = "0.7.4"
 handlebars = "5.1.0"
 serde_derive = "1.0.196"
