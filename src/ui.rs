@@ -1,6 +1,6 @@
-use handlebars::Handlebars;
+use askama::Template;
+use std::fs::File;
 use std::io::{BufRead, Result};
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::extract::{Path, State};
@@ -53,6 +53,7 @@ impl<'d> TreemapNode {
 #[template(path = "sourcefile.html")]
 struct SourceFileTemplate<'a> {
     sorted_line_data: Vec<(&'a str, &'a str)>,
+    path: &'a str,
 }
 
 #[derive(Debug, Clone)]
@@ -60,11 +61,11 @@ struct UiState {
     treemap_data: Arc<TreemapNode>,
 }
 
-fn is_regular_file_and_can_be_opened(path: &str) -> bool {
+fn try_open_file(path: &str) -> Option<File> {
     if let Ok(true) = std::fs::metadata(path).map(|metadata| metadata.is_file()) {
-        std::fs::File::open(path).is_ok()
+        std::fs::File::open(path).ok()
     } else {
-        false
+        None
     }
 }
 
@@ -93,9 +94,6 @@ async fn treemap_or_file_handler(
     State(state): State<UiState>,
     path: Option<Path<String>>,
 ) -> Html<String> {
-    // TODO: Cache.
-    let mut handlebars = Handlebars::new();
-
     let original_abs_path = path.map(|p| p.0).unwrap_or_default();
 
     // TODO: Add arg
@@ -110,14 +108,12 @@ async fn treemap_or_file_handler(
     );
 
     // TODO: Ensure to not open wrong file
-    if is_regular_file_and_can_be_opened(&abs_path) {
-        println!("Loading file: {}", abs_path);
-        let full_path = format!("/{}", abs_path);
+    if try_open_file(&abs_path).is_some() {
         let syntax_set = syntect::parsing::SyntaxSet::load_defaults_newlines();
         let themes = syntect::highlighting::ThemeSet::load_defaults().themes;
         let theme = themes.get("base16-ocean.dark").unwrap();
 
-        let mut highlighter = HighlightFile::new(full_path, &syntax_set, theme).unwrap();
+        let mut highlighter = HighlightFile::new(abs_path, &syntax_set, theme).unwrap();
         let (mut output, bg) = start_highlighted_html_snippet(theme);
 
         let mut line = String::new();
@@ -168,12 +164,11 @@ async fn treemap_or_file_handler(
         // TODO: Give tip about --map-path flag
     }
 
-    assert!(handlebars.register_template_string("index", source).is_ok());
-    Html(
-        handlebars
-            .render("index", &HbsData { path: abs_path })
-            .unwrap(),
-    )
+    let rendered = SourceFileTemplate {
+        sorted_line_data: vec![("hej", "da")],
+        path: &abs_path,
+    };
+    Html(rendered.render().unwrap())
     // } else {
     //     Html(format!(
     //         "ERROR: Could not find {path:?}. Maybe you want to visit <a href=\"/__debug__\""
