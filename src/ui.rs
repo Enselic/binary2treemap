@@ -168,7 +168,6 @@ async fn treemap_or_file_handler(
         // TODO: Give tip about --map-path flag
     }
 
-    let source = include_str!("../static/treemap.hbs");
     assert!(handlebars.register_template_string("index", source).is_ok());
     Html(
         handlebars
