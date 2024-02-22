@@ -7,7 +7,9 @@
 </head>
 
 <body>
-    <h1>TODO</h1>
+    <h1>Per-line data on how TODO contributes to binary size</h1>
+    <p>A line-annotated syntax-highlighted copy of the source file is at the bottom of the page. TODO: Put it at the top
+    </p>
     <table>
         <thead>
             <tr>
@@ -16,7 +18,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for item in line_data %}
+            {% for item in sorted_line_data %}
             <tr>
                 <td>item.line_number</td>
                 <td>item.size_in_binary</td>

@@ -1,7 +1,7 @@
+use handlebars::Handlebars;
 use std::io::{BufRead, Result};
 use std::path::PathBuf;
 use std::sync::Arc;
-use handlebars::Handlebars;
 
 use axum::extract::{Path, State};
 use axum::response::Html;
@@ -49,10 +49,23 @@ impl<'d> TreemapNode {
     }
 }
 
+#[derive(askama::Template)]
+#[template(path = "sourcefile.html")]
+struct SourceFileTemplate<'a> {
+    sorted_line_data: Vec<(&'a str, &'a str)>,
+}
+
 #[derive(Debug, Clone)]
 struct UiState {
     treemap_data: Arc<TreemapNode>,
-    handlebars: Handlebars,
+}
+
+fn is_regular_file_and_can_be_opened(path: &str) -> bool {
+    if let Ok(true) = std::fs::metadata(path).map(|metadata| metadata.is_file()) {
+        std::fs::File::open(path).is_ok()
+    } else {
+        false
+    }
 }
 
 async fn serve_impl(treemap_data: TreemapNode) -> Result<()> {
@@ -91,15 +104,13 @@ async fn treemap_or_file_handler(
         "/home/martin/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust",
     );
 
-    println!("Handling: {} ({})", abs_path, original_abs_path);
-
-    let 
+    println!(
+        "Looking for local file system path {} (mapped from {})",
+        abs_path, original_abs_path
+    );
 
     // TODO: Ensure to not open wrong file
-    if abs_path.len() > 2
-        && std::fs::File::open(&PathBuf::from(format!("/{}", abs_path))).is_ok()
-        && std::fs::metadata(abs_path)
-    {
+    if is_regular_file_and_can_be_opened(&abs_path) {
         println!("Loading file: {}", abs_path);
         let full_path = format!("/{}", abs_path);
         let syntax_set = syntect::parsing::SyntaxSet::load_defaults_newlines();
@@ -153,11 +164,17 @@ async fn treemap_or_file_handler(
         }
         output.push_str("</pre>\n");
         return Html(output);
+    } else {
+        // TODO: Give tip about --map-path flag
     }
 
     let source = include_str!("../static/treemap.hbs");
     assert!(handlebars.register_template_string("index", source).is_ok());
-    Html(handlebars.render("index", &HbsData { path: abs_path }).unwrap())
+    Html(
+        handlebars
+            .render("index", &HbsData { path: abs_path })
+            .unwrap(),
+    )
     // } else {
     //     Html(format!(
     //         "ERROR: Could not find {path:?}. Maybe you want to visit <a href=\"/__debug__\""
