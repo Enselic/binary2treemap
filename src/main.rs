@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
 };
 
@@ -63,6 +63,8 @@ fn process_binary(path: &Path) -> Result<TreemapNode> {
         children: HashMap::new(),
     };
 
+    let mut printed_paths: HashSet<&str> = HashSet::new();
+
     for probe in 0..size {
         if let Some(loc) = context.find_location(probe as u64).unwrap() {
             // The root is a special case so manually increment the size here.
@@ -73,7 +75,8 @@ fn process_binary(path: &Path) -> Result<TreemapNode> {
             let mut current = &mut treemap_data;
             if let Some(path) = loc.file {
                 let verbose = true;
-                if verbose {
+                if verbose && !printed_paths.contains(path) {
+                    printed_paths.insert(path);
                     println!("path: {:?}", path);
                 }
                 let mut components = path.split('/').filter(|c| !c.is_empty()).peekable();

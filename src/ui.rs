@@ -1,8 +1,8 @@
-use askama::Template;
 use std::fs::File;
 use std::io::{BufRead, Result};
 use std::sync::Arc;
 
+use askama::Template;
 use axum::extract::{Path, State};
 use axum::response::Html;
 use axum::routing::get;
@@ -49,7 +49,7 @@ impl<'d> TreemapNode {
     }
 }
 
-#[derive(askama::Template)]
+#[derive(Template)]
 #[template(path = "sourcefile.html")]
 struct SourceFileTemplate<'a> {
     sorted_line_data: Vec<(&'a str, &'a str)>,
@@ -94,11 +94,11 @@ async fn treemap_or_file_handler(
     State(state): State<UiState>,
     path: Option<Path<String>>,
 ) -> Html<String> {
-    let original_abs_path = path.map(|p| p.0).unwrap_or_default();
+    let original_abs_path = format!("/{}", path.map(|p| p.0).unwrap_or_default());
 
     // TODO: Add arg
     let abs_path = original_abs_path.replace(
-        "/rustc/fb5ed726f72c6d16c788517c60ec00d4564b9348",
+        "/rustc/b11fbfbf351b94c7eecf9e6749a4544a6d4717fa",
         "/home/martin/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust",
     );
 

@@ -7,7 +7,7 @@
 </head>
 
 <body>
-    <h1>Per-line data on how {% path %} contributes to binary size</h1>
+    <h1>Per-line data on how {{ path }} contributes to binary size</h1>
     <p>A line-annotated syntax-highlighted copy of the source file is at the bottom of the page. TODO: Put it at the top
     </p>
     <table>
@@ -20,8 +20,8 @@
         <tbody>
             {% for item in sorted_line_data %}
             <tr>
-                <td>item.line_number</td>
-                <td>item.size_in_binary</td>
+                <td>{{ item.0 }}</td>
+                <td>{{ item.1 }}</td>
             </tr>
             {% endfor %}
         </tbody>
