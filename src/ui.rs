@@ -96,6 +96,17 @@ async fn treemap_or_file_handler(
 ) -> Html<String> {
     let original_abs_path = format!("/{}", path.map(|p| p.0).unwrap_or_default());
 
+    let file_data = state
+        .treemap_data
+        .for_path(&Some(original_abs_path.clone()))
+        .unwrap()
+        .clone();
+
+    let line_to_bytes = match file_data {
+        TreemapNode::File { line_to_bytes, .. } => line_to_bytes.clone(),
+        _ => unreachable!(),
+    };
+
     // TODO: Add arg
     let abs_path = original_abs_path.replace(
         "/rustc/b11fbfbf351b94c7eecf9e6749a4544a6d4717fa",
@@ -117,17 +128,6 @@ async fn treemap_or_file_handler(
         let (mut output, bg) = start_highlighted_html_snippet(theme);
 
         let mut line = String::new();
-
-        let file_data = state
-            .treemap_data
-            .for_path(&Some(original_abs_path.clone()))
-            .unwrap()
-            .clone();
-
-        let line_to_bytes = match file_data {
-            TreemapNode::File { line_to_bytes, .. } => line_to_bytes.clone(),
-            _ => unreachable!(),
-        };
 
         // line.push_str("<pre>Bytes contributed to binary by line:<pre>\n\n\n");
 
