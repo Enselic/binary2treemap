@@ -31,13 +31,16 @@ pub struct Args {
 
     #[arg(long)]
     no_serve: bool,
+
+    #[arg(long)]
+    verbose: bool,
 }
 
 fn main() -> Result<()> {
     let args = <Args as clap::Parser>::parse();
 
     println!("Processing {:?}, please wait", &args.path);
-    let treemap_data = process_binary(&args.path)?;
+    let treemap_data = process_binary(&args, &args.path)?;
 
     if args.dump_json {
         println!("{}", serde_json::to_string_pretty(&treemap_data)?);
@@ -51,7 +54,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn process_binary(path: &Path) -> Result<TreemapNode> {
+fn process_binary(args: &Args, path: &Path) -> Result<TreemapNode> {
     let file_data = std::fs::read(path)?;
     let object = object::File::parse(file_data.as_slice())?;
     let context = addr2line::Context::new(&object)?;
@@ -74,8 +77,7 @@ fn process_binary(path: &Path) -> Result<TreemapNode> {
 
             let mut current = &mut treemap_data;
             if let Some(path) = loc.file {
-                let verbose = true;
-                if verbose && !printed_paths.contains(path) {
+                if args.verbose && !printed_paths.contains(path) {
                     printed_paths.insert(path);
                     println!("path: {:?}", path);
                 }
